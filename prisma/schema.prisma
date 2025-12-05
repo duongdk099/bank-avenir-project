@@ -1,0 +1,329 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  CLIENT
+  ADMIN
+  MANAGER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  INVESTMENT
+}
+
+enum OperationType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  PAYMENT
+  FEE
+}
+
+enum OrderStatus {
+  PENDING
+  EXECUTED
+  CANCELLED
+}
+
+enum TradeType {
+  BUY
+  SELL
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  COMPLETED
+  DEFAULTED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  passwordHash    String            @map("password_hash")
+  role            UserRole          @default(CLIENT)
+  status          UserStatus        @default(ACTIVE)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  
+  profile         UserProfile?
+  accounts        BankAccount[]
+  sentMessages    Message[]         @relation("SentMessages")
+  receivedMessages Message[]        @relation("ReceivedMessages")
+  conversations1  PrivateConversation[] @relation("User1Conversations")
+  conversations2  PrivateConversation[] @relation("User2Conversations")
+  notifications   Notification[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id              String    @id @default(uuid())
+  userId          String    @unique @map("user_id")
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  phone           String?
+  address         String?
+  city            String?
+  postalCode      String?   @map("postal_code")
+  country         String?
+  dateOfBirth     DateTime? @map("date_of_birth")
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model BankAccount {
+  id              String      @id @default(uuid())
+  userId          String      @map("user_id")
+  iban            String      @unique
+  accountType     AccountType @map("account_type")
+  balance         Decimal     @default(0) @db.Decimal(15, 2)
+  currency        String      @default("EUR")
+  status          String      @default("ACTIVE")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operations      AccountOperations[]
+  transfersFrom   Transfer[]  @relation("FromAccount")
+  transfersTo     Transfer[]  @relation("ToAccount")
+  orders          Order[]
+  loans           Loan[]
+  portfolios      Portfolio[]
+
+  @@map("bank_accounts")
+}
+
+model AccountOperations {
+  id              String        @id @default(uuid())
+  accountId       String        @map("account_id")
+  type            OperationType
+  amount          Decimal       @db.Decimal(15, 2)
+  description     String?
+  senderIban      String?       @map("sender_iban")
+  recipientIban   String?       @map("recipient_iban")
+  balanceAfter    Decimal       @map("balance_after") @db.Decimal(15, 2)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  
+  account         BankAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_operations")
+}
+
+model Transfer {
+  id              String      @id @default(uuid())
+  fromAccountId   String      @map("from_account_id")
+  toAccountId     String      @map("to_account_id")
+  amount          Decimal     @db.Decimal(15, 2)
+  description     String?
+  reference       String      @unique
+  status          String      @default("COMPLETED")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  
+  fromAccount     BankAccount @relation("FromAccount", fields: [fromAccountId], references: [id])
+  toAccount       BankAccount @relation("ToAccount", fields: [toAccountId], references: [id])
+
+  @@map("transfers")
+}
+
+model SavingsRate {
+  id              String   @id @default(uuid())
+  accountType     String   @map("account_type")
+  rate            Decimal  @db.Decimal(5, 4)
+  minBalance      Decimal  @map("min_balance") @db.Decimal(15, 2)
+  effectiveDate   DateTime @map("effective_date")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("savings_rates")
+}
+
+model Security {
+  id              String   @id @default(uuid())
+  symbol          String   @unique
+  name            String
+  type            String
+  exchange        String?
+  currentPrice    Decimal  @map("current_price") @db.Decimal(15, 4)
+  currency        String   @default("EUR")
+  lastUpdated     DateTime @map("last_updated")
+  
+  orders          Order[]
+  trades          Trade[]
+  portfolios      Portfolio[]
+
+  @@map("securities")
+}
+
+model Order {
+  id                String      @id @default(uuid())
+  userId            String      @map("user_id")
+  accountId         String      @map("account_id")
+  securityId        String      @map("security_id")
+  type              TradeType
+  quantity          Int
+  remainingQuantity Int         @map("remaining_quantity")
+  executedQuantity  Int         @default(0) @map("executed_quantity")
+  price             Decimal     @db.Decimal(15, 4)
+  status            OrderStatus @default(PENDING)
+  createdAt         DateTime    @default(now()) @map("created_at")
+  executedAt        DateTime?   @map("executed_at")
+  
+  account           BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  security          Security    @relation(fields: [securityId], references: [id])
+
+  @@map("orders")
+}
+
+model Trade {
+  id              String      @id @default(uuid())
+  buyOrderId      String      @map("buy_order_id")
+  sellOrderId     String      @map("sell_order_id")
+  buyAccountId    String      @map("buy_account_id")
+  sellAccountId   String      @map("sell_account_id")
+  securityId      String      @map("security_id")
+  quantity        Int
+  price           Decimal     @db.Decimal(15, 4)
+  commission      Decimal     @default(1.00) @db.Decimal(15, 2)
+  executedAt      DateTime    @default(now()) @map("executed_at")
+  
+  security        Security    @relation(fields: [securityId], references: [id])
+
+  @@map("trades")
+}
+
+model Loan {
+  id              String         @id @default(uuid())
+  userId          String         @map("user_id")
+  accountId       String         @map("account_id")
+  amount          Decimal        @db.Decimal(15, 2)
+  interestRate    Decimal        @map("interest_rate") @db.Decimal(5, 4)
+  insuranceRate   Decimal        @default(0) @map("insurance_rate") @db.Decimal(5, 4)
+  durationMonths  Int            @map("duration_months")
+  monthlyPayment  Decimal        @map("monthly_payment") @db.Decimal(15, 2)
+  status          LoanStatus     @default(PENDING)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  approvalDate    DateTime?      @map("approval_date")
+  firstPaymentDate DateTime?     @map("first_payment_date")
+  
+  account         BankAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  schedules       LoanSchedule[]
+
+  @@map("loans")
+}
+
+model LoanSchedule {
+  id              String    @id @default(uuid())
+  loanId          String    @map("loan_id")
+  installmentNumber Int     @map("installment_number")
+  dueDate         DateTime  @map("due_date")
+  principalAmount Decimal   @map("principal_amount") @db.Decimal(15, 2)
+  interestAmount  Decimal   @map("interest_amount") @db.Decimal(15, 2)
+  insuranceAmount Decimal   @default(0) @map("insurance_amount") @db.Decimal(15, 2)
+  totalAmount     Decimal   @map("total_amount") @db.Decimal(15, 2)
+  isPaid          Boolean   @default(false) @map("is_paid")
+  paidDate        DateTime? @map("paid_date")
+  
+  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_schedules")
+}
+
+model Portfolio {
+  id              String      @id @default(uuid())
+  accountId       String      @map("account_id")
+  securityId      String      @map("security_id")
+  quantity        Int
+  avgPurchasePrice Decimal    @map("avg_purchase_price") @db.Decimal(15, 4)
+  totalCost       Decimal     @map("total_cost") @db.Decimal(15, 2)
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  account         BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  security        Security    @relation(fields: [securityId], references: [id])
+
+  @@unique([accountId, securityId])
+  @@map("portfolios")
+}
+
+model PrivateConversation {
+  id              String    @id @default(uuid())
+  user1Id         String    @map("user1_id")
+  user2Id         String    @map("user2_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  user1           User      @relation("User1Conversations", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2           User      @relation("User2Conversations", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages        Message[]
+
+  @@unique([user1Id, user2Id])
+  @@map("private_conversations")
+}
+
+model Message {
+  id              String              @id @default(uuid())
+  conversationId  String              @map("conversation_id")
+  senderId        String              @map("sender_id")
+  receiverId      String              @map("receiver_id")
+  content         String
+  isRead          Boolean             @default(false) @map("is_read")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  
+  conversation    PrivateConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User                @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver        User                @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Notification {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  title           String
+  message         String
+  type            String
+  isRead          Boolean   @default(false) @map("is_read")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ==================== EVENT STORE ====================
+
+model Event {
+  id              String   @id @default(uuid())
+  aggregateId     String   @map("aggregate_id")
+  aggregateType   String   @map("aggregate_type")
+  version         Int
+  type            String
+  payload         Json
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  @@unique([aggregateId, version])
+  @@map("events")
+}
+

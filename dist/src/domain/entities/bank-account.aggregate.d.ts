@@ -1,0 +1,33 @@
+import { AggregateRoot } from './aggregate-root.js';
+import { IDomainEvent } from './domain-event.interface.js';
+import { Money } from '../value-objects/money.vo.js';
+import { IBAN } from '../value-objects/iban.vo.js';
+export declare class BankAccountAggregate extends AggregateRoot {
+    private userId;
+    private iban;
+    private accountType;
+    private balance;
+    private status;
+    private interestRate?;
+    constructor(id: string);
+    static open(id: string, userId: string, iban: string, accountType: string, initialBalance?: number, interestRate?: number): BankAccountAggregate;
+    deposit(amount: number, description?: string): void;
+    withdraw(amount: number, description?: string): void;
+    sendTransfer(recipientAccountId: string, recipientIban: string, amount: number, description?: string): void;
+    receiveTransfer(senderAccountId: string, senderIban: string, amount: number, description?: string): void;
+    applyInterest(): void;
+    private isInternalIban;
+    protected applyEvent(event: IDomainEvent): void;
+    private onAccountOpened;
+    private onFundsDeposited;
+    private onFundsWithdrawn;
+    private onTransferSent;
+    private onTransferReceived;
+    private onInterestApplied;
+    getUserId(): string;
+    getIban(): IBAN;
+    getAccountType(): string;
+    getBalance(): Money;
+    getStatus(): string;
+    getInterestRate(): number | undefined;
+}

@@ -1,0 +1,31 @@
+import { AggregateRoot } from './aggregate-root.js';
+import { IDomainEvent } from './domain-event.interface.js';
+import { LoanSchedulePayment } from './events/loan-schedule-generated.event.js';
+export declare class LoanAggregate extends AggregateRoot {
+    private userId;
+    private accountId;
+    private principal;
+    private annualRate;
+    private termMonths;
+    private insuranceRate;
+    private monthlyPayment;
+    private totalAmount;
+    private status;
+    private schedule;
+    constructor(id: string);
+    static grant(id: string, userId: string, accountId: string, principal: number, annualRate: number, termMonths: number, insuranceRate: number): LoanAggregate;
+    generateSchedule(): void;
+    protected applyEvent(event: IDomainEvent): void;
+    private onLoanGranted;
+    private onLoanScheduleGenerated;
+    getUserId(): string;
+    getAccountId(): string;
+    getPrincipal(): number;
+    getAnnualRate(): number;
+    getTermMonths(): number;
+    getInsuranceRate(): number;
+    getMonthlyPayment(): number;
+    getTotalAmount(): number;
+    getStatus(): string;
+    getSchedule(): LoanSchedulePayment[];
+}

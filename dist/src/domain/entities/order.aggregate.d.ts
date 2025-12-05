@@ -1,0 +1,31 @@
+import { AggregateRoot } from './aggregate-root.js';
+import { IDomainEvent } from './domain-event.interface.js';
+export declare class OrderAggregate extends AggregateRoot {
+    private userId;
+    private accountId;
+    private securityId;
+    private type;
+    private quantity;
+    private price;
+    private status;
+    private remainingQuantity;
+    constructor(id: string);
+    static place(id: string, userId: string, accountId: string, securityId: string, type: string, quantity: number, price: number): OrderAggregate;
+    execute(matchedOrderId: string, executedQuantity: number, executedPrice: number): void;
+    cancel(reason: string): void;
+    protected applyEvent(event: IDomainEvent): void;
+    private onOrderPlaced;
+    private onOrderExecuted;
+    private onOrderCancelled;
+    getUserId(): string;
+    getAccountId(): string;
+    getSecurityId(): string;
+    getType(): string;
+    getQuantity(): number;
+    getPrice(): number;
+    getStatus(): string;
+    getRemainingQuantity(): number;
+    isBuyOrder(): boolean;
+    isSellOrder(): boolean;
+    isPending(): boolean;
+}

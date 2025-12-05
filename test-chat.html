@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Test</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .section { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+    input, textarea { width: 100%; padding: 8px; margin: 5px 0; }
+    button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    #messages { height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9; }
+    .message { margin: 5px 0; padding: 8px; background: white; border-radius: 4px; }
+    .status { padding: 5px; margin: 5px 0; border-radius: 3px; }
+    .connected { background: #d4edda; color: #155724; }
+    .disconnected { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bank Chat System Test</h1>
+    
+    <div class="section">
+      <h3>Connection</h3>
+      <input type="text" id="userId" placeholder="Your User ID" value="user-001">
+      <button onclick="connect()">Connect</button>
+      <button onclick="disconnect()">Disconnect</button>
+      <div id="status" class="status disconnected">Disconnected</div>
+    </div>
+
+    <div class="section">
+      <h3>Send Private Message</h3>
+      <input type="text" id="receiverId" placeholder="Receiver User ID" value="user-002">
+      <textarea id="messageContent" placeholder="Message content" rows="3"></textarea>
+      <button onclick="sendMessage()">Send Message</button>
+    </div>
+
+    <div class="section">
+      <h3>Client Help Request</h3>
+      <textarea id="helpMessage" placeholder="Help request message" rows="3">I need help with my investment account</textarea>
+      <button onclick="requestHelp()">Request Help</button>
+    </div>
+
+    <div class="section">
+      <h3>Advisor Actions</h3>
+      <input type="text" id="conversationId" placeholder="Conversation ID">
+      <button onclick="acceptHelp()">Accept Help Request</button>
+    </div>
+
+    <div class="section">
+      <h3>Messages</h3>
+      <div id="messages"></div>
+      <button onclick="clearMessages()">Clear</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    let socket = null;
+
+    function connect() {
+      const userId = document.getElementById('userId').value;
+      if (!userId) {
+        addMessage('Error: Please enter a user ID');
+        return;
+      }
+
+      // Connect to WebSocket server
+      socket = io('http://localhost:3000/chat', {
+        query: { userId: userId },
+        transports: ['websocket', 'polling']
+      });
+
+      socket.on('connect', () => {
+        updateStatus('Connected', true);
+        addMessage(`Connected with socket ID: ${socket.id}`);
+      });
+
+      socket.on('disconnect', () => {
+        updateStatus('Disconnected', false);
+        addMessage('Disconnected from server');
+      });
+
+      socket.on('connect_error', (error) => {
+        addMessage(`Connection error: ${error.message}`);
+      });
+
+      // Listen for new messages
+      socket.on('new_message', (data) => {
+        addMessage(`📩 New message from ${data.senderName}: ${data.content}`, 'received');
+      });
+
+      // Listen for help requests (advisors only)
+      socket.on('help_request', (data) => {
+        addMessage(`🆘 Help request from user ${data.userId}: ${data.message}`, 'help');
+        document.getElementById('conversationId').value = data.conversationId;
+      });
+
+      // Listen for help accepted (client)
+      socket.on('help_accepted', (data) => {
+        addMessage(`✅ Advisor ${data.advisorName} accepted your help request`, 'success');
+      });
+
+      // Listen for request taken (other advisors)
+      socket.on('request_taken', (data) => {
+        addMessage(`ℹ️ Help request ${data.conversationId} was taken by another advisor`, 'info');
+      });
+    }
+
+    function disconnect() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    }
+
+    function sendMessage() {
+      if (!socket || !socket.connected) {
+        addMessage('Error: Not connected');
+        return;
+      }
+
+      const receiverId = document.getElementById('receiverId').value;
+      const content = document.getElementById('messageContent').value;
+
+      if (!receiverId || !content) {
+        addMessage('Error: Please enter receiver ID and message');
+        return;
+      }
+
+      socket.emit('private_message', {
+        receiverId: receiverId,
+        content: content
+      }, (response) => {
+        if (response.success) {
+          addMessage(`✅ Message sent to ${receiverId}`, 'sent');
+          document.getElementById('messageContent').value = '';
+        } else {
+          addMessage(`❌ Error: ${response.error}`, 'error');
+        }
+      });
+    }
+
+    function requestHelp() {
+      if (!socket || !socket.connected) {
+        addMessage('Error: Not connected');
+        return;
+      }
+
+      const message = document.getElementById('helpMessage').value;
+
+      socket.emit('request_help', {
+        message: message
+      }, (response) => {
+        if (response.success) {
+          addMessage(`✅ Help request sent. Conversation ID: ${response.conversationId}`, 'sent');
+        } else {
+          addMessage(`❌ Error: ${response.error}`, 'error');
+        }
+      });
+    }
+
+    function acceptHelp() {
+      if (!socket || !socket.connected) {
+        addMessage('Error: Not connected');
+        return;
+      }
+
+      const conversationId = document.getElementById('conversationId').value;
+
+      if (!conversationId) {
+        addMessage('Error: Please enter conversation ID');
+        return;
+      }
+
+      socket.emit('accept_help', {
+        conversationId: conversationId
+      }, (response) => {
+        if (response.success) {
+          addMessage(`✅ Help request accepted. Now assisting user ${response.clientId}`, 'success');
+        } else {
+          addMessage(`❌ Error: ${response.error}`, 'error');
+        }
+      });
+    }
+
+    function updateStatus(text, connected) {
+      const status = document.getElementById('status');
+      status.textContent = text;
+      status.className = 'status ' + (connected ? 'connected' : 'disconnected');
+    }
+
+    function addMessage(text, type = '') {
+      const messages = document.getElementById('messages');
+      const msg = document.createElement('div');
+      msg.className = 'message ' + type;
+      msg.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+      messages.appendChild(msg);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function clearMessages() {
+      document.getElementById('messages').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
