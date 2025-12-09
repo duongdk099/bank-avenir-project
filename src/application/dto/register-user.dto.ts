@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsDate } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class RegisterUserDto {
   @IsEmail()
@@ -38,6 +39,7 @@ export class RegisterUserDto {
   country?: string;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   dateOfBirth?: Date;
 }
