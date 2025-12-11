@@ -18,6 +18,7 @@ export declare class LoanController {
             status: string;
             createdAt: Date;
             updatedAt: Date;
+            name: string | null;
             userId: string;
             iban: string;
             accountType: import("@prisma/client").$Enums.AccountType;
@@ -56,6 +57,7 @@ export declare class LoanController {
             status: string;
             createdAt: Date;
             updatedAt: Date;
+            name: string | null;
             userId: string;
             iban: string;
             accountType: import("@prisma/client").$Enums.AccountType;

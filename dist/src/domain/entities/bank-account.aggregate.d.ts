@@ -17,6 +17,9 @@ export declare class BankAccountAggregate extends AggregateRoot {
     receiveTransfer(senderAccountId: string, senderIban: string, amount: number, description?: string): void;
     applyInterest(): void;
     private isInternalIban;
+    rename(newName: string): void;
+    ban(reason: string): void;
+    close(reason: string): void;
     protected applyEvent(event: IDomainEvent): void;
     private onAccountOpened;
     private onFundsDeposited;

@@ -1,7 +1,9 @@
+import { CommandBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
 export declare class AdminController {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly commandBus;
+    constructor(prisma: PrismaService, commandBus: CommandBus);
     createSecurity(dto: {
         symbol: string;
         name: string;
@@ -19,6 +21,7 @@ export declare class AdminController {
             currency: string;
             exchange: string | null;
             currentPrice: import("@prisma/client-runtime-utils").Decimal;
+            isAvailable: boolean;
             lastUpdated: Date;
         };
     }>;
@@ -34,6 +37,7 @@ export declare class AdminController {
             currency: string;
             exchange: string | null;
             currentPrice: import("@prisma/client-runtime-utils").Decimal;
+            isAvailable: boolean;
             lastUpdated: Date;
         };
     }>;
@@ -45,6 +49,7 @@ export declare class AdminController {
         currency: string;
         exchange: string | null;
         currentPrice: import("@prisma/client-runtime-utils").Decimal;
+        isAvailable: boolean;
         lastUpdated: Date;
     }[]>;
     updateSavingsRate(dto: {
@@ -124,5 +129,54 @@ export declare class AdminController {
             total: number;
             active: number;
         };
+    }>;
+    createStock(dto: {
+        symbol: string;
+        name: string;
+        type: string;
+        exchange?: string;
+        currentPrice: number;
+        currency?: string;
+    }): Promise<any>;
+    updateStockAvailability(symbol: string, dto: {
+        isAvailable: boolean;
+    }): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    deleteStock(symbol: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    createAccountForClient(dto: {
+        userId: string;
+        accountType: string;
+        initialDeposit: number;
+        name?: string;
+    }): Promise<{
+        message: string;
+        accountId: any;
+        iban: any;
+    }>;
+    renameAccount(id: string, dto: {
+        newName: string;
+        requestedBy: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    banAccount(id: string, dto: {
+        reason: string;
+        bannedBy: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    closeAccount(id: string, dto: {
+        reason: string;
+        closedBy: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
     }>;
 }

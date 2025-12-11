@@ -94,6 +94,23 @@ class BankAccountAggregate extends aggregate_root_js_1.AggregateRoot {
         const bankCode = cleanIban.substring(4, 9);
         return cleanIban.startsWith('FR') && bankCode === '12345';
     }
+    rename(newName) {
+    }
+    ban(reason) {
+        if (this.status === 'BANNED') {
+            throw new Error('Account is already banned');
+        }
+        this.status = 'BANNED';
+    }
+    close(reason) {
+        if (this.status === 'CLOSED') {
+            throw new Error('Account is already closed');
+        }
+        if (!this.balance.isZero()) {
+            throw new Error('Cannot close account with non-zero balance');
+        }
+        this.status = 'CLOSED';
+    }
     applyEvent(event) {
         switch (event.eventType) {
             case 'ACCOUNT_OPENED':

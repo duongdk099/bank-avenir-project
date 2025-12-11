@@ -111,4 +111,18 @@ export class EventStore {
 
     aggregate.markEventsAsCommitted();
   }
+
+  async get<T extends AggregateRoot>(
+    aggregateId: string,
+    AggregateClass: new (...args: any[]) => T,
+  ): Promise<T> {
+    const aggregateType = AggregateClass.name;
+    const events = await this.getEventsForAggregate(aggregateId, aggregateType);
+    
+    // Create aggregate instance with ID (for BankAccountAggregate)
+    const aggregate = new AggregateClass(aggregateId);
+    aggregate.loadFromHistory(events);
+    
+    return aggregate;
+  }
 }

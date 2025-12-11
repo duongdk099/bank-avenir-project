@@ -3,7 +3,26 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "setupFilesAfterEnv": ["<rootDir>/setup.ts"],
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": ["ts-jest", {
+      "tsconfig": {
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "resolvePackageJsonExports": false,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "target": "ES2023",
+        "skipLibCheck": true,
+        "strictNullChecks": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitAny": false
+      }
+    }]
+  },
+  "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

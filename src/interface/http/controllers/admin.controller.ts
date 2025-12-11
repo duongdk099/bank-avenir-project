@@ -1,8 +1,20 @@
-import { Controller, Post, Put, Body, UseGuards, Get, Param } from '@nestjs/common';
+import { Controller, Post, Put, Body, UseGuards, Get, Param, Delete, ConflictException, NotFoundException } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
 import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infrastructure/auth/guards/roles.guard.js';
 import { Roles } from '../../../infrastructure/auth/decorators/roles.decorator.js';
+import { 
+  CreateStockCommand, 
+  UpdateStockAvailabilityCommand, 
+  DeleteStockCommand 
+} from '../../../application/commands/manage-stock.commands.js';
+import { 
+  DirectorCreateAccountCommand, 
+  RenameAccountCommand, 
+  BanAccountCommand, 
+  CloseAccountCommand 
+} from '../../../application/commands/account-management.commands.js';
 
 /**
  * Admin Controller
@@ -15,7 +27,10 @@ import { Roles } from '../../../infrastructure/auth/decorators/roles.decorator.j
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AdminController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly commandBus: CommandBus,
+  ) {}
 
   /**
    * Create a new security (DIRECTOR only)
@@ -231,6 +246,187 @@ export class AdminController {
         total: totalLoans,
         active: activeLoans,
       },
+    };
+  }
+
+  // ==================== Stock Management ====================
+
+  /**
+   * Create a new stock (Admin only)
+   */
+  @Post('stocks')
+  @Roles('ADMIN')
+  async createStock(
+    @Body()
+    dto: {
+      symbol: string;
+      name: string;
+      type: string;
+      exchange?: string;
+      currentPrice: number;
+      currency?: string;
+    },
+  ) {
+    // Check if stock already exists
+    const existing = await this.prisma.security.findUnique({
+      where: { symbol: dto.symbol.toUpperCase() },
+    });
+
+    if (existing) {
+      throw new ConflictException(`Stock with symbol ${dto.symbol} already exists`);
+    }
+
+    const command = new CreateStockCommand(
+      dto.symbol,
+      dto.name,
+      dto.type,
+      dto.exchange,
+      dto.currentPrice,
+      dto.currency || 'USD',
+    );
+
+    const result = await this.commandBus.execute(command);
+
+    return {
+      message: 'Stock created successfully',
+      ...result,
+    };
+  }
+
+  /**
+   * Update stock availability (Admin only)
+   */
+  @Put('stocks/:symbol/availability')
+  @Roles('ADMIN')
+  async updateStockAvailability(
+    @Param('symbol') symbol: string,
+    @Body() dto: { isAvailable: boolean },
+  ) {
+    // Check if stock exists
+    const stock = await this.prisma.security.findUnique({
+      where: { symbol: symbol.toUpperCase() },
+    });
+
+    if (!stock) {
+      throw new NotFoundException(`Stock with symbol ${symbol} not found`);
+    }
+
+    const command = new UpdateStockAvailabilityCommand(symbol, dto.isAvailable);
+    await this.commandBus.execute(command);
+
+    return {
+      success: true,
+      message: `Stock ${symbol} is now ${dto.isAvailable ? 'available' : 'unavailable'} for trading`,
+    };
+  }
+
+  /**
+   * Delete stock (Admin only)
+   */
+  @Delete('stocks/:symbol')
+  @Roles('ADMIN')
+  async deleteStock(@Param('symbol') symbol: string) {
+    // Check if stock exists
+    const stock = await this.prisma.security.findUnique({
+      where: { symbol: symbol.toUpperCase() },
+    });
+
+    if (!stock) {
+      throw new NotFoundException(`Stock with symbol ${symbol} not found`);
+    }
+
+    const command = new DeleteStockCommand(symbol);
+    await this.commandBus.execute(command);
+
+    return {
+      success: true,
+      message: `Stock ${symbol} deleted successfully`,
+    };
+  }
+
+  // ==================== Account Management (Director) ====================
+
+  /**
+   * Create account for client (Director only)
+   */
+  @Post('accounts/create')
+  @Roles('ADMIN')
+  async createAccountForClient(
+    @Body()
+    dto: {
+      userId: string;
+      accountType: string;
+      initialDeposit: number;
+      name?: string;
+    },
+  ) {
+    const command = new DirectorCreateAccountCommand(
+      dto.userId,
+      dto.accountType,
+      dto.initialDeposit,
+      dto.name,
+    );
+
+    const result = await this.commandBus.execute(command);
+
+    return {
+      message: 'Account created successfully',
+      accountId: result.accountId,
+      iban: result.iban,
+    };
+  }
+
+  /**
+   * Rename account (Director only)
+   */
+  @Put('accounts-rename/:id')
+  @Roles('ADMIN')
+  async renameAccount(
+    @Param('id') id: string,
+    @Body() dto: { newName: string; requestedBy: string },
+  ) {
+    const command = new RenameAccountCommand(id, dto.newName, dto.requestedBy);
+    await this.commandBus.execute(command);
+
+    return {
+      success: true,
+      message: 'Account renamed successfully',
+    };
+  }
+
+  /**
+   * Ban account (Director only)
+   */
+  @Put('accounts/:id/ban')
+  @Roles('ADMIN')
+  async banAccount(
+    @Param('id') id: string,
+    @Body() dto: { reason: string; bannedBy: string },
+  ) {
+    const command = new BanAccountCommand(id, dto.reason, dto.bannedBy);
+    await this.commandBus.execute(command);
+
+    return {
+      success: true,
+      message: 'Account banned successfully',
+    };
+  }
+
+  /**
+   * Close account (Director only)
+   */
+  @Delete('accounts/:id')
+  @Roles('ADMIN')
+  async closeAccount(
+    @Param('id') id: string,
+    @Body() dto: { reason: string; closedBy: string },
+  ) {
+    const command = new CloseAccountCommand(id, dto.reason, dto.closedBy);
+    await this.commandBus.execute(command);
+
+    return {
+      success: true,
+      message: 'Account closed successfully',
     };
   }
 }

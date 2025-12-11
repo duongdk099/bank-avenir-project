@@ -16,11 +16,6 @@
       "type": "string"
     },
     {
-      "key": "adminToken",
-      "value": "",
-      "type": "string"
-    },
-    {
       "key": "userId",
       "value": "",
       "type": "string"
@@ -49,16 +44,11 @@
       "key": "conversationId",
       "value": "",
       "type": "string"
-    },
-    {
-      "key": "notificationId",
-      "value": "",
-      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Authentication",
+      "name": "1. Authentication",
       "item": [
         {
           "name": "Register Client User",
@@ -67,13 +57,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('userId', jsonData.userId);",
-                  "    console.log('User ID saved:', jsonData.userId);",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.userId) {",
+                  "        pm.collectionVariables.set('userId', response.userId);",
+                  "        console.log('User ID saved:', response.userId);",
+                  "    }",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -87,7 +78,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"client@test.com\",\n  \"password\": \"Test123!@#\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+33612345678\",\n  \"address\": \"123 Main St\",\n  \"city\": \"Paris\",\n  \"postalCode\": \"75001\",\n  \"country\": \"France\",\n  \"dateOfBirth\": \"1990-01-01\"\n}"
+              "raw": "{\n  \"email\": \"client@bank.com\",\n  \"password\": \"SecurePass123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"postalCode\": \"10001\",\n  \"country\": \"USA\",\n  \"dateOfBirth\": \"1990-01-15\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -98,20 +89,17 @@
           "response": []
         },
         {
-          "name": "Register Admin User",
+          "name": "Register Manager User",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('adminId', jsonData.userId);",
-                  "    console.log('Admin ID saved:', jsonData.userId);",
-                  "    console.log('⚠️ NOTE: Manually set role to ADMIN in database');",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Manager registered:', response.userId);",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -125,7 +113,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@test.com\",\n  \"password\": \"Admin123!@#\",\n  \"firstName\": \"Admin\",\n  \"lastName\": \"User\",\n  \"phone\": \"+33612345680\",\n  \"address\": \"789 Admin St\",\n  \"city\": \"Paris\",\n  \"postalCode\": \"75002\",\n  \"country\": \"France\",\n  \"dateOfBirth\": \"1985-03-20\"\n}"
+              "raw": "{\n  \"email\": \"manager@bank.com\",\n  \"password\": \"SecurePass123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+1234567891\",\n  \"address\": \"456 Bank St\",\n  \"city\": \"Boston\",\n  \"postalCode\": \"02101\",\n  \"country\": \"USA\",\n  \"dateOfBirth\": \"1985-05-20\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -143,12 +131,17 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 200) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-                  "    console.log('Access token saved');",
+                  "    const response = pm.response.json();",
+                  "    if (response.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', response.accessToken);",
+                  "        console.log('Access token saved');",
+                  "    }",
+                  "    if (response.user && response.user.id) {",
+                  "        pm.collectionVariables.set('userId', response.user.id);",
+                  "        console.log('User ID saved:', response.user.id);",
+                  "    }",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -162,44 +155,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"client@test.com\",\n  \"password\": \"Test123!@#\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login Admin",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('adminToken', jsonData.accessToken);",
-                  "    console.log('Admin token saved');",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@test.com\",\n  \"password\": \"Admin123!@#\"\n}"
+              "raw": "{\n  \"email\": \"client@bank.com\",\n  \"password\": \"SecurePass123!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -212,7 +168,7 @@
       ]
     },
     {
-      "name": "Accounts",
+      "name": "2. Accounts",
       "item": [
         {
           "name": "Open Checking Account",
@@ -221,13 +177,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('accountId', jsonData.accountId);",
-                  "    console.log('Account ID saved:', jsonData.accountId);",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.accountId) {",
+                  "        pm.collectionVariables.set('accountId', response.accountId);",
+                  "        console.log('Account ID saved:', response.accountId);",
+                  "    }",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -245,7 +202,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"CHECKING\",\n  \"initialDeposit\": 1000\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"CHECKING\",\n  \"initialDeposit\": 10000\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/accounts/open",
@@ -271,33 +228,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"SAVINGS\",\n  \"initialDeposit\": 5000\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/accounts/open",
-              "host": ["{{baseUrl}}"],
-              "path": ["accounts", "open"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Open Investment Account",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"INVESTMENT\",\n  \"initialDeposit\": 10000\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"SAVINGS\",\n  \"initialDeposit\": 50000\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/accounts/open",
@@ -364,22 +295,23 @@
       ]
     },
     {
-      "name": "Admin - Stock Management",
+      "name": "3. Admin (Securities & Settings)",
       "item": [
         {
-          "name": "Create Stock",
+          "name": "Create Security - AAPL",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('securityId', jsonData.stockId);",
-                  "    console.log('Security ID saved:', jsonData.stockId);",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.security && response.security.id) {",
+                  "        pm.collectionVariables.set('securityId', response.security.id);",
+                  "        console.log('Security ID saved:', response.security.id);",
+                  "    }",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -392,25 +324,25 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"symbol\": \"AAPL\",\n  \"name\": \"Apple Inc.\",\n  \"type\": \"STOCK\",\n  \"exchange\": \"NASDAQ\",\n  \"currentPrice\": 150.50,\n  \"currency\": \"USD\"\n}"
+              "raw": "{\n  \"symbol\": \"AAPL\",\n  \"name\": \"Apple Inc.\",\n  \"type\": \"STOCK\",\n  \"exchange\": \"NASDAQ\",\n  \"currentPrice\": 180.50,\n  \"currency\": \"USD\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/stocks",
+              "raw": "{{baseUrl}}/admin/securities",
               "host": ["{{baseUrl}}"],
-              "path": ["admin", "stocks"]
+              "path": ["admin", "securities"]
             }
           },
           "response": []
         },
         {
-          "name": "Update Stock Availability",
+          "name": "Create Security - TSLA",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -418,47 +350,29 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isAvailable\": false\n}"
+              "raw": "{\n  \"symbol\": \"TSLA\",\n  \"name\": \"Tesla Inc.\",\n  \"type\": \"STOCK\",\n  \"exchange\": \"NASDAQ\",\n  \"currentPrice\": 250.00,\n  \"currency\": \"USD\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/stocks/AAPL/availability",
+              "raw": "{{baseUrl}}/admin/securities",
               "host": ["{{baseUrl}}"],
-              "path": ["admin", "stocks", "AAPL", "availability"]
+              "path": ["admin", "securities"]
             }
           },
           "response": []
         },
         {
-          "name": "Delete Stock",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/stocks/AAPL",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "stocks", "AAPL"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "List All Securities",
+          "name": "Get All Securities",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -480,12 +394,12 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"price\": 155.75\n}"
+              "raw": "{\n  \"price\": 185.75\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admin/securities/{{securityId}}/price",
@@ -494,14 +408,9 @@
             }
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin - Account Management",
-      "item": [
+        },
         {
-          "name": "Create Account for Client",
+          "name": "Create Savings Rate",
           "request": {
             "method": "POST",
             "header": [
@@ -511,121 +420,12 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"CHECKING\",\n  \"initialDeposit\": 2000,\n  \"name\": \"Business Account\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/accounts/create",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "create"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Rename Account",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"newName\": \"Primary Checking\",\n  \"requestedBy\": \"{{adminId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}/rename",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "{{accountId}}", "rename"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Ban Account",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"Suspicious activity detected\",\n  \"bannedBy\": \"{{adminId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}/ban",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "{{accountId}}", "ban"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Close Account",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"Account closure requested\",\n  \"closedBy\": \"{{adminId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "{{accountId}}"]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin - Savings Rates",
-      "item": [
-        {
-          "name": "Update Savings Rate",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"accountType\": \"SAVINGS\",\n  \"rate\": 0.025,\n  \"minBalance\": 1000,\n  \"effectiveDate\": \"2024-01-01T00:00:00.000Z\"\n}"
+              "raw": "{\n  \"accountType\": \"SAVINGS\",\n  \"rate\": 0.035,\n  \"minBalance\": 1000,\n  \"effectiveDate\": \"2024-01-01\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admin/savings-rate",
@@ -642,7 +442,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -652,20 +452,15 @@
             }
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin - User Management",
-      "item": [
+        },
         {
-          "name": "List All Users",
+          "name": "Get All Users",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -687,7 +482,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
@@ -709,7 +504,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -723,22 +518,23 @@
       ]
     },
     {
-      "name": "Orders & Trading",
+      "name": "4. Orders & Trading",
       "item": [
         {
-          "name": "Place Buy Order",
+          "name": "Place Buy Order - AAPL",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('orderId', jsonData.orderId);",
-                  "    console.log('Order ID saved:', jsonData.orderId);",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.orderId) {",
+                  "        pm.collectionVariables.set('orderId', response.orderId);",
+                  "        console.log('Order ID saved:', response.orderId);",
+                  "    }",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -756,7 +552,33 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"securityId\": \"{{securityId}}\",\n  \"type\": \"BUY\",\n  \"quantity\": 10,\n  \"price\": 155\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"securityId\": \"{{securityId}}\",\n  \"type\": \"BUY\",\n  \"quantity\": 10,\n  \"price\": 180.50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Sell Order - AAPL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"securityId\": \"{{securityId}}\",\n  \"type\": \"SELL\",\n  \"quantity\": 5,\n  \"price\": 182.00\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/orders",
@@ -867,7 +689,7 @@
       ]
     },
     {
-      "name": "Loans",
+      "name": "5. Loans",
       "item": [
         {
           "name": "Grant Loan",
@@ -876,13 +698,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('loanId', jsonData.loanId);",
-                  "    console.log('Loan ID saved:', jsonData.loanId);",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.loanId) {",
+                  "        pm.collectionVariables.set('loanId', response.loanId);",
+                  "        console.log('Loan ID saved:', response.loanId);",
+                  "    }",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -900,7 +723,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"principal\": 50000,\n  \"annualRate\": 0.05,\n  \"termMonths\": 240,\n  \"insuranceRate\": 0.003\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"principal\": 25000,\n  \"annualRate\": 0.055,\n  \"termMonths\": 36,\n  \"insuranceRate\": 0.01\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/loans/grant",
@@ -911,7 +734,7 @@
           "response": []
         },
         {
-          "name": "Get Loan Details",
+          "name": "Get Loan by ID",
           "request": {
             "method": "GET",
             "header": [
@@ -929,7 +752,7 @@
           "response": []
         },
         {
-          "name": "Get Amortization Schedule",
+          "name": "Get Loan Schedule",
           "request": {
             "method": "GET",
             "header": [
@@ -980,12 +803,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"principal\": 100000,\n  \"annualRate\": 0.04,\n  \"termMonths\": 360,\n  \"insuranceRate\": 0.003\n}"
+              "raw": "{\n  \"principal\": 50000,\n  \"annualRate\": 0.045,\n  \"termMonths\": 60,\n  \"insuranceRate\": 0.015\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/loans/{{loanId}}/calculate-payment",
+              "raw": "{{baseUrl}}/loans/calculate-payment/preview",
               "host": ["{{baseUrl}}"],
-              "path": ["loans", "{{loanId}}", "calculate-payment"]
+              "path": ["loans", "calculate-payment", "preview"]
             }
           },
           "response": []
@@ -993,7 +816,7 @@
       ]
     },
     {
-      "name": "Messages",
+      "name": "6. Chat & Messages",
       "item": [
         {
           "name": "Get Conversations",
@@ -1030,21 +853,15 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/messages/conversations/{{conversationId}}?limit=50",
+              "raw": "{{baseUrl}}/messages/conversations/{{conversationId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["messages", "conversations", "{{conversationId}}"],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "50"
-                }
-              ]
+              "path": ["messages", "conversations", "{{conversationId}}"]
             }
           },
           "response": []
         },
         {
-          "name": "Get Unread Message Count",
+          "name": "Get Unread Messages Count",
           "request": {
             "method": "GET",
             "header": [
@@ -1070,10 +887,10 @@
       ]
     },
     {
-      "name": "Notifications",
+      "name": "7. Notifications",
       "item": [
         {
-          "name": "Get Notifications",
+          "name": "Get All Notifications",
           "request": {
             "method": "GET",
             "header": [
@@ -1083,7 +900,31 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/notifications?userId={{userId}}&unreadOnly=false",
+              "raw": "{{baseUrl}}/notifications?userId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?userId={{userId}}&unreadOnly=true",
               "host": ["{{baseUrl}}"],
               "path": ["notifications"],
               "query": [
@@ -1093,7 +934,7 @@
                 },
                 {
                   "key": "unreadOnly",
-                  "value": "false"
+                  "value": "true"
                 }
               ]
             }
@@ -1125,7 +966,7 @@
           "response": []
         },
         {
-          "name": "Mark Notification Read",
+          "name": "Mark Notification as Read",
           "request": {
             "method": "POST",
             "header": [
@@ -1135,40 +976,99 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "raw": "{{baseUrl}}/notifications/notification-id-here/read",
               "host": ["{{baseUrl}}"],
-              "path": ["notifications", "{{notificationId}}", "read"]
+              "path": ["notifications", "notification-id-here", "read"]
             }
           },
           "response": []
         },
         {
-          "name": "Mark All Notifications Read",
+          "name": "Mark All Notifications as Read",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
               {
                 "key": "Authorization",
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/notifications/read-all",
+              "raw": "{{baseUrl}}/notifications/read-all?userId={{userId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["notifications", "read-all"]
+              "path": ["notifications", "read-all"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
             }
           },
           "response": []
         }
       ]
+    },
+    {
+      "name": "8. Server-Sent Events (SSE)",
+      "item": [
+        {
+          "name": "SSE - Real-time Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sse/notifications?userId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sse", "notifications"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "**Note:** This is a Server-Sent Events endpoint. It maintains a persistent connection and streams events.\n\n**To test:**\n1. Use browser or EventSource client\n2. Or use Postman but expect continuous stream\n3. Events: ORDER_EXECUTED, LOAN_GRANTED, SAVINGS_RATE_CHANGED, PRIVATE_MESSAGE_SENT, ACCOUNT_CREDITED, ACCOUNT_DEBITED\n\n**Example JavaScript:**\n```javascript\nconst eventSource = new EventSource('http://localhost:3000/sse/notifications?userId=your-user-id');\neventSource.onmessage = (event) => {\n  console.log('Notification:', JSON.parse(event.data));\n};\n```"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// This runs before every request",
+          "console.log('Request to:', pm.request.url.toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// This runs after every request",
+          "if (pm.response.code >= 400) {",
+          "    console.error('Error Response:', pm.response.json());",
+          "} else {",
+          "    console.log('Success:', pm.response.code);",
+          "}"
+        ]
+      }
     }
   ]
 }

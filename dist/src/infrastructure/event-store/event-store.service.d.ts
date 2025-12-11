@@ -9,4 +9,5 @@ export declare class EventStore {
     saveEvents(aggregateId: string, aggregateType: string, events: IDomainEvent[], expectedVersion: number): Promise<void>;
     getEventsForAggregate(aggregateId: string, aggregateType: string): Promise<IDomainEvent[]>;
     save(aggregate: AggregateRoot, aggregateType: string): Promise<void>;
+    get<T extends AggregateRoot>(aggregateId: string, AggregateClass: new (...args: any[]) => T): Promise<T>;
 }

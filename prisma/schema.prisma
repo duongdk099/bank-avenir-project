@@ -104,6 +104,7 @@ model BankAccount {
   balance         Decimal     @default(0) @db.Decimal(15, 2)
   currency        String      @default("EUR")
   status          String      @default("ACTIVE")
+  name            String?
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
   
@@ -169,6 +170,7 @@ model Security {
   exchange        String?
   currentPrice    Decimal  @map("current_price") @db.Decimal(15, 4)
   currency        String   @default("EUR")
+  isAvailable     Boolean  @default(true) @map("is_available")
   lastUpdated     DateTime @map("last_updated")
   
   orders          Order[]

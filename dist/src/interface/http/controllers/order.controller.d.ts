@@ -23,6 +23,7 @@ export declare class OrderController {
             currency: string;
             exchange: string | null;
             currentPrice: import("@prisma/client-runtime-utils").Decimal;
+            isAvailable: boolean;
             lastUpdated: Date;
         };
         account: {
@@ -30,6 +31,7 @@ export declare class OrderController {
             status: string;
             createdAt: Date;
             updatedAt: Date;
+            name: string | null;
             userId: string;
             iban: string;
             accountType: import("@prisma/client").$Enums.AccountType;
@@ -59,6 +61,7 @@ export declare class OrderController {
             currency: string;
             exchange: string | null;
             currentPrice: import("@prisma/client-runtime-utils").Decimal;
+            isAvailable: boolean;
             lastUpdated: Date;
         };
     } & {
@@ -90,6 +93,7 @@ export declare class OrderController {
             currency: string;
             exchange: string | null;
             currentPrice: import("@prisma/client-runtime-utils").Decimal;
+            isAvailable: boolean;
             lastUpdated: Date;
         };
     } & {

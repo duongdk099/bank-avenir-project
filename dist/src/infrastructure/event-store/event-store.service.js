@@ -86,6 +86,13 @@ let EventStore = class EventStore {
         await this.saveEvents(aggregate.getId(), aggregateType, uncommittedEvents, expectedVersion);
         aggregate.markEventsAsCommitted();
     }
+    async get(aggregateId, AggregateClass) {
+        const aggregateType = AggregateClass.name;
+        const events = await this.getEventsForAggregate(aggregateId, aggregateType);
+        const aggregate = new AggregateClass(aggregateId);
+        aggregate.loadFromHistory(events);
+        return aggregate;
+    }
 };
 exports.EventStore = EventStore;
 exports.EventStore = EventStore = __decorate([

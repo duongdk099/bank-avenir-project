@@ -1,23 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 // Infrastructure Modules
-import { PrismaModule } from './infrastructure/database/prisma/prisma.module.js';
-import { AuthModule } from './infrastructure/auth/auth.module.js';
-import { EventStoreModule } from './infrastructure/event-store/event-store.module.js';
+import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
+import { AuthModule } from './infrastructure/auth/auth.module';
+import { EventStoreModule } from './infrastructure/event-store/event-store.module';
 
 // Domain Modules
-import { UserModule } from './application/user.module.js';
-import { AccountModule } from './application/account.module.js';
-import { InvestmentModule } from './application/investment.module.js';
-import { LoanModule } from './application/loan.module.js';
-import { ChatModule } from './application/chat.module.js';
-import { NotificationModule } from './application/notification.module.js';
-
-// Controllers
-import { AdminController } from './interface/http/controllers/admin.controller.js';
+import { UserModule } from './application/user.module';
+import { AccountModule } from './application/account.module';
+import { InvestmentModule } from './application/investment.module';
+import { LoanModule } from './application/loan.module';
+import { ChatModule } from './application/chat.module';
+import { NotificationModule } from './application/notification.module';
+import { AdminModule } from './application/admin.module';
 
 @Module({
   imports: [
@@ -36,8 +34,9 @@ import { AdminController } from './interface/http/controllers/admin.controller.j
     LoanModule,
     ChatModule,
     NotificationModule,
+    AdminModule,
   ],
-  controllers: [AppController, AdminController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}

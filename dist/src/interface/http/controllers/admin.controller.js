@@ -14,14 +14,19 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminController = void 0;
 const common_1 = require("@nestjs/common");
+const cqrs_1 = require("@nestjs/cqrs");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
 const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/jwt-auth.guard.js");
 const roles_guard_js_1 = require("../../../infrastructure/auth/guards/roles.guard.js");
 const roles_decorator_js_1 = require("../../../infrastructure/auth/decorators/roles.decorator.js");
+const manage_stock_commands_js_1 = require("../../../application/commands/manage-stock.commands.js");
+const account_management_commands_js_1 = require("../../../application/commands/account-management.commands.js");
 let AdminController = class AdminController {
     prisma;
-    constructor(prisma) {
+    commandBus;
+    constructor(prisma, commandBus) {
         this.prisma = prisma;
+        this.commandBus = commandBus;
     }
     async createSecurity(dto) {
         const security = await this.prisma.security.create({
@@ -149,6 +154,81 @@ let AdminController = class AdminController {
             },
         };
     }
+    async createStock(dto) {
+        const existing = await this.prisma.security.findUnique({
+            where: { symbol: dto.symbol.toUpperCase() },
+        });
+        if (existing) {
+            throw new common_1.ConflictException(`Stock with symbol ${dto.symbol} already exists`);
+        }
+        const command = new manage_stock_commands_js_1.CreateStockCommand(dto.symbol, dto.name, dto.type, dto.exchange, dto.currentPrice, dto.currency || 'USD');
+        const result = await this.commandBus.execute(command);
+        return {
+            message: 'Stock created successfully',
+            ...result,
+        };
+    }
+    async updateStockAvailability(symbol, dto) {
+        const stock = await this.prisma.security.findUnique({
+            where: { symbol: symbol.toUpperCase() },
+        });
+        if (!stock) {
+            throw new common_1.NotFoundException(`Stock with symbol ${symbol} not found`);
+        }
+        const command = new manage_stock_commands_js_1.UpdateStockAvailabilityCommand(symbol, dto.isAvailable);
+        await this.commandBus.execute(command);
+        return {
+            success: true,
+            message: `Stock ${symbol} is now ${dto.isAvailable ? 'available' : 'unavailable'} for trading`,
+        };
+    }
+    async deleteStock(symbol) {
+        const stock = await this.prisma.security.findUnique({
+            where: { symbol: symbol.toUpperCase() },
+        });
+        if (!stock) {
+            throw new common_1.NotFoundException(`Stock with symbol ${symbol} not found`);
+        }
+        const command = new manage_stock_commands_js_1.DeleteStockCommand(symbol);
+        await this.commandBus.execute(command);
+        return {
+            success: true,
+            message: `Stock ${symbol} deleted successfully`,
+        };
+    }
+    async createAccountForClient(dto) {
+        const command = new account_management_commands_js_1.DirectorCreateAccountCommand(dto.userId, dto.accountType, dto.initialDeposit, dto.name);
+        const result = await this.commandBus.execute(command);
+        return {
+            message: 'Account created successfully',
+            accountId: result.accountId,
+            iban: result.iban,
+        };
+    }
+    async renameAccount(id, dto) {
+        const command = new account_management_commands_js_1.RenameAccountCommand(id, dto.newName, dto.requestedBy);
+        await this.commandBus.execute(command);
+        return {
+            success: true,
+            message: 'Account renamed successfully',
+        };
+    }
+    async banAccount(id, dto) {
+        const command = new account_management_commands_js_1.BanAccountCommand(id, dto.reason, dto.bannedBy);
+        await this.commandBus.execute(command);
+        return {
+            success: true,
+            message: 'Account banned successfully',
+        };
+    }
+    async closeAccount(id, dto) {
+        const command = new account_management_commands_js_1.CloseAccountCommand(id, dto.reason, dto.closedBy);
+        await this.commandBus.execute(command);
+        return {
+            success: true,
+            message: 'Account closed successfully',
+        };
+    }
 };
 exports.AdminController = AdminController;
 __decorate([
@@ -213,9 +293,70 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getDashboardStats", null);
+__decorate([
+    (0, common_1.Post)('stocks'),
+    (0, roles_decorator_js_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "createStock", null);
+__decorate([
+    (0, common_1.Put)('stocks/:symbol/availability'),
+    (0, roles_decorator_js_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Param)('symbol')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "updateStockAvailability", null);
+__decorate([
+    (0, common_1.Delete)('stocks/:symbol'),
+    (0, roles_decorator_js_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Param)('symbol')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deleteStock", null);
+__decorate([
+    (0, common_1.Post)('accounts/create'),
+    (0, roles_decorator_js_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "createAccountForClient", null);
+__decorate([
+    (0, common_1.Put)('accounts-rename/:id'),
+    (0, roles_decorator_js_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "renameAccount", null);
+__decorate([
+    (0, common_1.Put)('accounts/:id/ban'),
+    (0, roles_decorator_js_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "banAccount", null);
+__decorate([
+    (0, common_1.Delete)('accounts/:id'),
+    (0, roles_decorator_js_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "closeAccount", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
-    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
+        cqrs_1.CommandBus])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map
