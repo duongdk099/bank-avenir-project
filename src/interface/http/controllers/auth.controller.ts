@@ -1,6 +1,7 @@
-import { Body, Controller, Post, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { RegisterUserCommand } from '../../../application/commands/register-user.command.js';
+import { ConfirmEmailCommand } from '../../../application/commands/confirm-email.command.js';
 import { LoginQuery } from '../../../application/queries/login.query.js';
 import { RegisterUserDto } from '../../../application/dto/register-user.dto.js';
 import { LoginDto } from '../../../application/dto/login.dto.js';
@@ -29,7 +30,18 @@ export class AuthController {
 
     const result = await this.commandBus.execute(command);
     return {
-      message: 'User registered successfully',
+      message: 'User registered successfully. Please check your email to confirm your account.',
+      userId: result.userId,
+      confirmationToken: result.confirmationToken, // For testing purposes
+    };
+  }
+
+  @Get('confirm/:token')
+  async confirmEmail(@Param('token') token: string) {
+    const command = new ConfirmEmailCommand(token);
+    const result = await this.commandBus.execute(command);
+    return {
+      message: result.message,
       userId: result.userId,
     };
   }

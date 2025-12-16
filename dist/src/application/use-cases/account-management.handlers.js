@@ -44,7 +44,7 @@ let DirectorCreateAccountHandler = class DirectorCreateAccountHandler {
         const iban = await this.ibanService.generateIban();
         const accountId = (0, uuid_1.v4)();
         const account = bank_account_aggregate_js_1.BankAccountAggregate.open(accountId, command.userId, iban.getValue(), command.accountType, command.initialDeposit || 0);
-        await this.eventStore.save(account, 'BankAccount');
+        await this.eventStore.save(account, 'BankAccountAggregate');
         return { accountId, iban: iban.getValue() };
     }
 };

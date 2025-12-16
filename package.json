@@ -37,6 +37,7 @@
     "@nestjs/websockets": "^11.1.9",
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",
+    "@types/nodemailer": "^7.0.4",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
@@ -47,6 +48,7 @@
     "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
+    "nodemailer": "^7.0.11",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
@@ -98,18 +100,25 @@
       "ts"
     ],
     "rootDir": ".",
-    "roots": ["<rootDir>/src", "<rootDir>/test/unit"],
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test/unit"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!uuid)"
+    ],
     "collectCoverageFrom": [
       "src/**/*.(t|j)s"
     ],
     "coverageDirectory": "./coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/src/$1"
+      "^src/(.*)$": "<rootDir>/src/$1",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   }
 }

@@ -219,6 +219,77 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
         });
         return { success: true };
     }
+    async handleTransferConversation(client, payload) {
+        const currentAdvisorId = this.socketUsers.get(client.id);
+        if (!currentAdvisorId) {
+            return { error: 'User not authenticated' };
+        }
+        const currentAdvisor = await this.prisma.user.findUnique({
+            where: { id: currentAdvisorId },
+            include: { profile: true },
+        });
+        if (!currentAdvisor || (currentAdvisor.role !== 'ADMIN' && currentAdvisor.role !== 'MANAGER')) {
+            return { error: 'Only advisors can transfer conversations' };
+        }
+        const conversation = await this.prisma.privateConversation.findUnique({
+            where: { id: payload.conversationId },
+            include: {
+                user1: { include: { profile: true } },
+                user2: { include: { profile: true } },
+            },
+        });
+        if (!conversation) {
+            return { error: 'Conversation not found' };
+        }
+        if (conversation.user2Id !== currentAdvisorId) {
+            return { error: 'You are not the owner of this conversation' };
+        }
+        const newAdvisor = await this.prisma.user.findUnique({
+            where: { id: payload.newAdvisorId },
+            include: { profile: true },
+        });
+        if (!newAdvisor) {
+            return { error: 'New advisor not found' };
+        }
+        if (newAdvisor.role !== 'ADMIN' && newAdvisor.role !== 'MANAGER') {
+            return { error: 'New advisor must have ADMIN or MANAGER role' };
+        }
+        if (currentAdvisorId === payload.newAdvisorId) {
+            return { error: 'Cannot transfer conversation to yourself' };
+        }
+        await this.prisma.privateConversation.update({
+            where: { id: payload.conversationId },
+            data: { user2Id: payload.newAdvisorId },
+        });
+        const clientId = conversation.user1Id;
+        const reason = payload.reason || 'Your conversation has been transferred to another advisor';
+        const transferMessage = `Conversation transferred from ${currentAdvisor.profile?.firstName} ${currentAdvisor.profile?.lastName} to ${newAdvisor.profile?.firstName} ${newAdvisor.profile?.lastName}. Reason: ${reason}`;
+        const systemMessageEvent = new chat_projector_js_1.PrivateMessageSentEvent(payload.conversationId, 'system', clientId, transferMessage);
+        this.eventBus.publish(systemMessageEvent);
+        this.server.to(`user:${payload.newAdvisorId}`).emit('conversation_transferred_to_you', {
+            conversationId: payload.conversationId,
+            clientId,
+            clientName: `${conversation.user1.profile?.firstName} ${conversation.user1.profile?.lastName}`,
+            fromAdvisor: `${currentAdvisor.profile?.firstName} ${currentAdvisor.profile?.lastName}`,
+            reason: payload.reason,
+            timestamp: new Date().toISOString(),
+        });
+        this.server.to(`user:${clientId}`).emit('advisor_changed', {
+            conversationId: payload.conversationId,
+            newAdvisorId: payload.newAdvisorId,
+            newAdvisorName: `${newAdvisor.profile?.firstName} ${newAdvisor.profile?.lastName}`,
+            previousAdvisorName: `${currentAdvisor.profile?.firstName} ${currentAdvisor.profile?.lastName}`,
+            reason: payload.reason,
+            timestamp: new Date().toISOString(),
+        });
+        this.logger.log(`Conversation ${payload.conversationId} transferred from ${currentAdvisorId} to ${payload.newAdvisorId}`);
+        return {
+            success: true,
+            message: `Conversation transferred successfully to ${newAdvisor.profile?.firstName} ${newAdvisor.profile?.lastName}`,
+            conversationId: payload.conversationId,
+            newAdvisorId: payload.newAdvisorId,
+        };
+    }
 };
 exports.ChatGateway = ChatGateway;
 __decorate([
@@ -257,6 +328,14 @@ __decorate([
     __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleMarkRead", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('transfer_conversation'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleTransferConversation", null);
 exports.ChatGateway = ChatGateway = ChatGateway_1 = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {

@@ -11,18 +11,20 @@ const common_1 = require("@nestjs/common");
 const cqrs_1 = require("@nestjs/cqrs");
 const auth_controller_js_1 = require("../interface/http/controllers/auth.controller.js");
 const register_user_handler_js_1 = require("./use-cases/register-user.handler.js");
+const confirm_email_handler_js_1 = require("./use-cases/confirm-email.handler.js");
 const login_handler_js_1 = require("./use-cases/login.handler.js");
 const auth_module_js_1 = require("../infrastructure/auth/auth.module.js");
 const event_store_module_js_1 = require("../infrastructure/event-store/event-store.module.js");
 const prisma_module_js_1 = require("../infrastructure/database/prisma/prisma.module.js");
-const CommandHandlers = [register_user_handler_js_1.RegisterUserHandler];
+const email_module_js_1 = require("../infrastructure/services/email.module.js");
+const CommandHandlers = [register_user_handler_js_1.RegisterUserHandler, confirm_email_handler_js_1.ConfirmEmailHandler];
 const QueryHandlers = [login_handler_js_1.LoginHandler];
 let UserModule = class UserModule {
 };
 exports.UserModule = UserModule;
 exports.UserModule = UserModule = __decorate([
     (0, common_1.Module)({
-        imports: [cqrs_1.CqrsModule, auth_module_js_1.AuthModule, event_store_module_js_1.EventStoreModule, prisma_module_js_1.PrismaModule],
+        imports: [cqrs_1.CqrsModule, auth_module_js_1.AuthModule, event_store_module_js_1.EventStoreModule, prisma_module_js_1.PrismaModule, email_module_js_1.EmailModule],
         controllers: [auth_controller_js_1.AuthController],
         providers: [...CommandHandlers, ...QueryHandlers],
     })

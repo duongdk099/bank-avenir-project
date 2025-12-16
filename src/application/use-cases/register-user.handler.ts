@@ -1,10 +1,12 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { ConflictException, BadRequestException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { RegisterUserCommand } from '../commands/register-user.command.js';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service.js';
 import { AuthService } from '../../infrastructure/auth/auth.service.js';
 import { EventStore } from '../../infrastructure/event-store/event-store.service.js';
 import { UserAggregate } from '../../domain/entities/user.aggregate.js';
+import { EmailService } from '../../infrastructure/services/email.service.js';
 import { v4 as uuidv4 } from 'uuid';
 
 @CommandHandler(RegisterUserCommand)
@@ -16,6 +18,8 @@ export class RegisterUserHandler
     private readonly authService: AuthService,
     private readonly eventStore: EventStore,
     private readonly eventBus: EventBus,
+    private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   async execute(command: RegisterUserCommand): Promise<{ userId: string }> {
@@ -71,6 +75,24 @@ export class RegisterUserHandler
       },
     });
 
-    return { userId };
+    // Generate email confirmation token (valid for 24 hours)
+    const confirmationToken = this.jwtService.sign(
+      { userId, email: command.email, type: 'email_confirmation' },
+      { expiresIn: '24h' },
+    );
+
+    // Send confirmation email
+    try {
+      await this.emailService.sendConfirmationEmail(
+        command.email,
+        confirmationToken,
+        `${command.firstName} ${command.lastName}`,
+      );
+    } catch (error) {
+      // Log error but don't fail registration
+      console.error('Failed to send confirmation email:', error);
+    }
+
+    return { userId, confirmationToken } as any;
   }
 }

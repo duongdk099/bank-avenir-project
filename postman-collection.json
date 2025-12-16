@@ -70,7 +70,10 @@
                   "if (pm.response.code === 201) {",
                   "    const jsonData = pm.response.json();",
                   "    pm.collectionVariables.set('userId', jsonData.userId);",
+                  "    pm.collectionVariables.set('confirmationToken', jsonData.confirmationToken);",
                   "    console.log('User ID saved:', jsonData.userId);",
+                  "    console.log('Confirmation token saved:', jsonData.confirmationToken);",
+                  "    console.log('📧 Email confirmation sent - check email or use next request');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -93,7 +96,41 @@
               "raw": "{{baseUrl}}/auth/register",
               "host": ["{{baseUrl}}"],
               "path": ["auth", "register"]
+            },
+            "description": "Register a new client user. An email confirmation link will be sent to the provided email address. The confirmationToken is also returned in the response for testing purposes."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Email confirmed successfully', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('confirmed');",
+                  "    console.log('✅ Email confirmation successful');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/confirm/{{confirmationToken}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "confirm", "{{confirmationToken}}"]
+            },
+            "description": "Confirm user email with the token received during registration. The token is valid for 24 hours."
           },
           "response": []
         },

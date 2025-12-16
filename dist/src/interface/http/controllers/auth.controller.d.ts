@@ -8,6 +8,11 @@ export declare class AuthController {
     register(dto: RegisterUserDto): Promise<{
         message: string;
         userId: any;
+        confirmationToken: any;
+    }>;
+    confirmEmail(token: string): Promise<{
+        message: any;
+        userId: any;
     }>;
     login(dto: LoginDto): Promise<any>;
 }

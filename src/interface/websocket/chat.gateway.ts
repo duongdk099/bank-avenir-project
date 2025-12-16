@@ -338,4 +338,126 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     return { success: true };
   }
+
+  /**
+   * Transfer conversation to another advisor
+   * 
+   * Payload: { conversationId: string, newAdvisorId: string, reason?: string }
+   * 
+   * Requirements:
+   * - Only current conversation owner (advisor) can transfer
+   * - New advisor must have ADMIN or MANAGER role
+   * - Notifies both advisors and client about the transfer
+   */
+  @SubscribeMessage('transfer_conversation')
+  async handleTransferConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { conversationId: string; newAdvisorId: string; reason?: string },
+  ) {
+    const currentAdvisorId = this.socketUsers.get(client.id);
+    
+    if (!currentAdvisorId) {
+      return { error: 'User not authenticated' };
+    }
+
+    // Verify current user is an advisor
+    const currentAdvisor = await this.prisma.user.findUnique({
+      where: { id: currentAdvisorId },
+      include: { profile: true },
+    });
+
+    if (!currentAdvisor || (currentAdvisor.role !== 'ADMIN' && currentAdvisor.role !== 'MANAGER')) {
+      return { error: 'Only advisors can transfer conversations' };
+    }
+
+    // Get conversation
+    const conversation = await this.prisma.privateConversation.findUnique({
+      where: { id: payload.conversationId },
+      include: {
+        user1: { include: { profile: true } },
+        user2: { include: { profile: true } },
+      },
+    });
+
+    if (!conversation) {
+      return { error: 'Conversation not found' };
+    }
+
+    // Verify current advisor owns the conversation (user2 is the advisor)
+    if (conversation.user2Id !== currentAdvisorId) {
+      return { error: 'You are not the owner of this conversation' };
+    }
+
+    // Verify new advisor exists and has correct role
+    const newAdvisor = await this.prisma.user.findUnique({
+      where: { id: payload.newAdvisorId },
+      include: { profile: true },
+    });
+
+    if (!newAdvisor) {
+      return { error: 'New advisor not found' };
+    }
+
+    if (newAdvisor.role !== 'ADMIN' && newAdvisor.role !== 'MANAGER') {
+      return { error: 'New advisor must have ADMIN or MANAGER role' };
+    }
+
+    // Prevent self-transfer
+    if (currentAdvisorId === payload.newAdvisorId) {
+      return { error: 'Cannot transfer conversation to yourself' };
+    }
+
+    // Transfer conversation
+    await this.prisma.privateConversation.update({
+      where: { id: payload.conversationId },
+      data: { user2Id: payload.newAdvisorId },
+    });
+
+    const clientId = conversation.user1Id;
+    const reason = payload.reason || 'Your conversation has been transferred to another advisor';
+
+    // Create transfer notification message
+    const transferMessage = `Conversation transferred from ${currentAdvisor.profile?.firstName} ${currentAdvisor.profile?.lastName} to ${newAdvisor.profile?.firstName} ${newAdvisor.profile?.lastName}. Reason: ${reason}`;
+    
+    // Send system message to conversation
+    const systemMessageEvent = new PrivateMessageSentEvent(
+      payload.conversationId,
+      'system',
+      clientId,
+      transferMessage,
+    );
+    this.eventBus.publish(systemMessageEvent);
+
+    // Notify new advisor about assignment
+    this.server.to(`user:${payload.newAdvisorId}`).emit('conversation_transferred_to_you', {
+      conversationId: payload.conversationId,
+      clientId,
+      clientName: `${conversation.user1.profile?.firstName} ${conversation.user1.profile?.lastName}`,
+      fromAdvisor: `${currentAdvisor.profile?.firstName} ${currentAdvisor.profile?.lastName}`,
+      reason: payload.reason,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Notify client about advisor change
+    this.server.to(`user:${clientId}`).emit('advisor_changed', {
+      conversationId: payload.conversationId,
+      newAdvisorId: payload.newAdvisorId,
+      newAdvisorName: `${newAdvisor.profile?.firstName} ${newAdvisor.profile?.lastName}`,
+      previousAdvisorName: `${currentAdvisor.profile?.firstName} ${currentAdvisor.profile?.lastName}`,
+      reason: payload.reason,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Notify current advisor (confirmation)
+    this.logger.log(
+      `Conversation ${payload.conversationId} transferred from ${currentAdvisorId} to ${payload.newAdvisorId}`,
+    );
+
+    return {
+      success: true,
+      message: `Conversation transferred successfully to ${newAdvisor.profile?.firstName} ${newAdvisor.profile?.lastName}`,
+      conversationId: payload.conversationId,
+      newAdvisorId: payload.newAdvisorId,
+    };
+  }
 }

@@ -12,22 +12,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegisterUserHandler = void 0;
 const cqrs_1 = require("@nestjs/cqrs");
 const common_1 = require("@nestjs/common");
+const jwt_1 = require("@nestjs/jwt");
 const register_user_command_js_1 = require("../commands/register-user.command.js");
 const prisma_service_js_1 = require("../../infrastructure/database/prisma/prisma.service.js");
 const auth_service_js_1 = require("../../infrastructure/auth/auth.service.js");
 const event_store_service_js_1 = require("../../infrastructure/event-store/event-store.service.js");
 const user_aggregate_js_1 = require("../../domain/entities/user.aggregate.js");
+const email_service_js_1 = require("../../infrastructure/services/email.service.js");
 const uuid_1 = require("uuid");
 let RegisterUserHandler = class RegisterUserHandler {
     prisma;
     authService;
     eventStore;
     eventBus;
-    constructor(prisma, authService, eventStore, eventBus) {
+    jwtService;
+    emailService;
+    constructor(prisma, authService, eventStore, eventBus, jwtService, emailService) {
         this.prisma = prisma;
         this.authService = authService;
         this.eventStore = eventStore;
         this.eventBus = eventBus;
+        this.jwtService = jwtService;
+        this.emailService = emailService;
     }
     async execute(command) {
         if (!command.email) {
@@ -64,7 +70,14 @@ let RegisterUserHandler = class RegisterUserHandler {
                 },
             },
         });
-        return { userId };
+        const confirmationToken = this.jwtService.sign({ userId, email: command.email, type: 'email_confirmation' }, { expiresIn: '24h' });
+        try {
+            await this.emailService.sendConfirmationEmail(command.email, confirmationToken, `${command.firstName} ${command.lastName}`);
+        }
+        catch (error) {
+            console.error('Failed to send confirmation email:', error);
+        }
+        return { userId, confirmationToken };
     }
 };
 exports.RegisterUserHandler = RegisterUserHandler;
@@ -73,6 +86,8 @@ exports.RegisterUserHandler = RegisterUserHandler = __decorate([
     __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
         auth_service_js_1.AuthService,
         event_store_service_js_1.EventStore,
-        cqrs_1.EventBus])
+        cqrs_1.EventBus,
+        jwt_1.JwtService,
+        email_service_js_1.EmailService])
 ], RegisterUserHandler);
 //# sourceMappingURL=register-user.handler.js.map

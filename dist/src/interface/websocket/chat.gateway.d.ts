@@ -61,4 +61,21 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         success: boolean;
         error?: undefined;
     }>;
+    handleTransferConversation(client: Socket, payload: {
+        conversationId: string;
+        newAdvisorId: string;
+        reason?: string;
+    }): Promise<{
+        error: string;
+        success?: undefined;
+        message?: undefined;
+        conversationId?: undefined;
+        newAdvisorId?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        conversationId: string;
+        newAdvisorId: string;
+        error?: undefined;
+    }>;
 }

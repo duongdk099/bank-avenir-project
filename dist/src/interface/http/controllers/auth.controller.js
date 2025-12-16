@@ -16,6 +16,7 @@ exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const cqrs_1 = require("@nestjs/cqrs");
 const register_user_command_js_1 = require("../../../application/commands/register-user.command.js");
+const confirm_email_command_js_1 = require("../../../application/commands/confirm-email.command.js");
 const login_query_js_1 = require("../../../application/queries/login.query.js");
 const register_user_dto_js_1 = require("../../../application/dto/register-user.dto.js");
 const login_dto_js_1 = require("../../../application/dto/login.dto.js");
@@ -30,7 +31,16 @@ let AuthController = class AuthController {
         const command = new register_user_command_js_1.RegisterUserCommand(dto.email, dto.password, dto.firstName, dto.lastName, dto.phone, dto.address, dto.city, dto.postalCode, dto.country, dto.dateOfBirth);
         const result = await this.commandBus.execute(command);
         return {
-            message: 'User registered successfully',
+            message: 'User registered successfully. Please check your email to confirm your account.',
+            userId: result.userId,
+            confirmationToken: result.confirmationToken,
+        };
+    }
+    async confirmEmail(token) {
+        const command = new confirm_email_command_js_1.ConfirmEmailCommand(token);
+        const result = await this.commandBus.execute(command);
+        return {
+            message: result.message,
             userId: result.userId,
         };
     }
@@ -47,6 +57,13 @@ __decorate([
     __metadata("design:paramtypes", [register_user_dto_js_1.RegisterUserDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
+__decorate([
+    (0, common_1.Get)('confirm/:token'),
+    __param(0, (0, common_1.Param)('token')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "confirmEmail", null);
 __decorate([
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
