@@ -52,4 +52,18 @@ export declare class AccountController {
         errors: number;
         message: string;
     }>;
+    renameAccount(id: string, dto: {
+        newName: string;
+        userId: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    deleteAccount(id: string, dto: {
+        userId: string;
+        reason?: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+    }>;
 }

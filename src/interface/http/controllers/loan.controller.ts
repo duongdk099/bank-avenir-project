@@ -1,8 +1,17 @@
-import { Body, Controller, Post, Get, Param } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { GrantLoanCommand } from '../../../application/commands/grant-loan.command.js';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
+import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
+import { RolesGuard } from '../../../infrastructure/auth/guards/roles.guard.js';
+import { Roles } from '../../../infrastructure/auth/decorators/roles.decorator.js';
 
+/**
+ * Loan Controller
+ * 
+ * Per assignment: "en tant que conseiller bancaire, je peux être amené à octroyer des crédit"
+ * Only MANAGER (Conseiller) role can grant loans
+ */
 @Controller('loans')
 export class LoanController {
   constructor(
@@ -10,7 +19,13 @@ export class LoanController {
     private readonly prisma: PrismaService,
   ) {}
 
+  /**
+   * Grant a new loan (MANAGER/Conseiller only)
+   * Per assignment: Only advisors can grant loans
+   */
   @Post('grant')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MANAGER')
   async grantLoan(
     @Body()
     dto: {

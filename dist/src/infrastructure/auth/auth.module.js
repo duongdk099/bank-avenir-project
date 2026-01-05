@@ -29,7 +29,7 @@ exports.AuthModule = AuthModule = __decorate([
             }),
         ],
         providers: [auth_service_js_1.AuthService, jwt_strategy_js_1.JwtStrategy],
-        exports: [auth_service_js_1.AuthService, jwt_strategy_js_1.JwtStrategy, passport_1.PassportModule],
+        exports: [auth_service_js_1.AuthService, jwt_strategy_js_1.JwtStrategy, passport_1.PassportModule, jwt_1.JwtModule],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

@@ -1,9 +1,10 @@
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, EventBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
 export declare class AdminController {
     private readonly prisma;
     private readonly commandBus;
-    constructor(prisma: PrismaService, commandBus: CommandBus);
+    private readonly eventBus;
+    constructor(prisma: PrismaService, commandBus: CommandBus, eventBus: EventBus);
     createSecurity(dto: {
         symbol: string;
         name: string;
@@ -11,22 +12,6 @@ export declare class AdminController {
         exchange?: string;
         currentPrice: number;
         currency?: string;
-    }): Promise<{
-        message: string;
-        security: {
-            symbol: string;
-            id: string;
-            name: string;
-            type: string;
-            currency: string;
-            exchange: string | null;
-            currentPrice: import("@prisma/client-runtime-utils").Decimal;
-            isAvailable: boolean;
-            lastUpdated: Date;
-        };
-    }>;
-    updateSecurityPrice(id: string, dto: {
-        price: number;
     }): Promise<{
         message: string;
         security: {
@@ -67,6 +52,7 @@ export declare class AdminController {
             minBalance: import("@prisma/client-runtime-utils").Decimal;
             effectiveDate: Date;
         };
+        notifiedUsers: number;
     }>;
     getSavingsRates(): Promise<{
         id: string;

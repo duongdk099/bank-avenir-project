@@ -110,6 +110,10 @@ export class OrderMatchingService {
         await this.eventStore.save(newOrder, 'Order');
         await this.eventStore.save(matchOrder, 'Order');
 
+        // Update security price based on last trade (market price discovery)
+        // Per assignment: stock price is calculated based on equilibrium between buy/sell
+        await this.updateSecurityPrice(newOrder.getSecurityId(), executionPrice);
+
         matchesFound++;
 
         this.logger.log(
@@ -204,5 +208,22 @@ export class OrderMatchingService {
       bestBid: bestBuy ? bestBuy.price.toNumber() : null,
       bestAsk: bestSell ? bestSell.price.toNumber() : null,
     };
+  }
+
+  /**
+   * Updates the security's current price based on last trade
+   * This implements market price discovery through supply and demand
+   * Per assignment: "Le cours est calculé en fonction du prix d'équilibre"
+   */
+  private async updateSecurityPrice(securityId: string, executionPrice: number): Promise<void> {
+    await this.prisma.security.update({
+      where: { id: securityId },
+      data: {
+        currentPrice: executionPrice,
+        lastUpdated: new Date(),
+      },
+    });
+
+    this.logger.log(`Security ${securityId} price updated to ${executionPrice}€`);
   }
 }

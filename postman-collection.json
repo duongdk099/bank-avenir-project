@@ -1,22 +1,28 @@
 {
   "info": {
-    "name": "Bank Project - Complete API Collection",
-    "description": "Complete Postman collection for testing the Bank Project backend with all endpoints, authentication, and real-time features.\n\n**Quick Start:**\n1. Run: `npm run start:dev`\n2. Import this collection into Postman\n3. Set environment variable: `baseUrl` = `http://localhost:3000`\n4. Execute requests in order (Auth → Accounts → Orders → Loans)\n5. JWT tokens are auto-saved to environment variables",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "name": "AVENIR Bank - Complete API Collection",
+    "description": "Comprehensive Postman collection for AVENIR Bank covering all API endpoints including authentication, account management, transfers, investments, loans, chat, and admin functions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
     {
       "key": "baseUrl",
       "value": "http://localhost:3000",
-      "type": "default"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
       "type": "string"
     },
     {
-      "key": "adminToken",
+      "key": "authToken",
       "value": "",
       "type": "string"
     },
@@ -31,12 +37,17 @@
       "type": "string"
     },
     {
-      "key": "orderId",
+      "key": "iban",
       "value": "",
       "type": "string"
     },
     {
       "key": "securityId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
       "value": "",
       "type": "string"
     },
@@ -49,11 +60,6 @@
       "key": "conversationId",
       "value": "",
       "type": "string"
-    },
-    {
-      "key": "notificationId",
-      "value": "",
-      "type": "string"
     }
   ],
   "item": [
@@ -61,20 +67,28 @@
       "name": "Authentication",
       "item": [
         {
-          "name": "Register Client User",
+          "name": "Register User",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response contains userId and confirmationToken', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('userId');",
+                  "    pm.expect(jsonData).to.have.property('confirmationToken');",
                   "    pm.collectionVariables.set('userId', jsonData.userId);",
                   "    pm.collectionVariables.set('confirmationToken', jsonData.confirmationToken);",
-                  "    console.log('User ID saved:', jsonData.userId);",
-                  "    console.log('Confirmation token saved:', jsonData.confirmationToken);",
-                  "    console.log('📧 Email confirmation sent - check email or use next request');",
-                  "}"
+                  "});",
+                  "",
+                  "pm.test('Response contains success message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('registered successfully');",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -90,14 +104,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"client@test.com\",\n  \"password\": \"Test123!@#\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+33612345678\",\n  \"address\": \"123 Main St\",\n  \"city\": \"Paris\",\n  \"postalCode\": \"75001\",\n  \"country\": \"France\",\n  \"dateOfBirth\": \"1990-01-01\"\n}"
+              "raw": "{\n  \"email\": \"client@avenir.com\",\n  \"password\": \"SecurePass123!\",\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Dupont\",\n  \"phone\": \"+33612345678\",\n  \"address\": \"123 Rue de la Paix\",\n  \"city\": \"Paris\",\n  \"postalCode\": \"75001\",\n  \"country\": \"France\",\n  \"dateOfBirth\": \"1990-01-15\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
               "host": ["{{baseUrl}}"],
               "path": ["auth", "register"]
             },
-            "description": "Register a new client user. An email confirmation link will be sent to the provided email address. The confirmationToken is also returned in the response for testing purposes."
+            "description": "Register a new user with email confirmation"
           },
           "response": []
         },
@@ -113,9 +127,154 @@
                   "});",
                   "",
                   "pm.test('Email confirmed successfully', function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.message).to.include('confirmed');",
-                  "    console.log('✅ Email confirmation successful');",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('userId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/confirm/{{confirmationToken}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "confirm", "{{confirmationToken}}"]
+            },
+            "description": "Confirm email address with token"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains access_token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('access_token');",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.collectionVariables.set('authToken', jsonData.access_token);",
+                  "    pm.collectionVariables.set('userId', jsonData.user.id);",
+                  "});",
+                  "",
+                  "pm.test('User object is valid', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "    pm.expect(jsonData.user).to.have.property('role');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"client@avenir.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login and receive JWT token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Open Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Account created with IBAN', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('accountId');",
+                  "    pm.expect(jsonData).to.have.property('iban');",
+                  "    pm.collectionVariables.set('accountId', jsonData.accountId);",
+                  "    pm.collectionVariables.set('iban', jsonData.iban);",
+                  "});",
+                  "",
+                  "pm.test('IBAN is valid French format', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.iban).to.match(/^FR[0-9]{2}/);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"CHECKING\",\n  \"initialDeposit\": 10000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/open",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "open"]
+            },
+            "description": "Open a new bank account (CHECKING, SAVINGS, or INVESTMENT)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Account Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Account details returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('iban');",
+                  "    pm.expect(jsonData).to.have.property('balance');",
+                  "    pm.expect(jsonData).to.have.property('accountType');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -126,295 +285,63 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/auth/confirm/{{confirmationToken}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "confirm", "{{confirmationToken}}"]
-            },
-            "description": "Confirm user email with the token received during registration. The token is valid for 24 hours."
-          },
-          "response": []
-        },
-        {
-          "name": "Register Admin User",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('adminId', jsonData.userId);",
-                  "    console.log('Admin ID saved:', jsonData.userId);",
-                  "    console.log('⚠️ NOTE: Manually set role to ADMIN in database');",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@test.com\",\n  \"password\": \"Admin123!@#\",\n  \"firstName\": \"Admin\",\n  \"lastName\": \"User\",\n  \"phone\": \"+33612345680\",\n  \"address\": \"789 Admin St\",\n  \"city\": \"Paris\",\n  \"postalCode\": \"75002\",\n  \"country\": \"France\",\n  \"dateOfBirth\": \"1985-03-20\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "register"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login Client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-                  "    console.log('Access token saved');",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"client@test.com\",\n  \"password\": \"Test123!@#\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login Admin",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('adminToken', jsonData.accessToken);",
-                  "    console.log('Admin token saved');",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@test.com\",\n  \"password\": \"Admin123!@#\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Accounts",
-      "item": [
-        {
-          "name": "Open Checking Account",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('accountId', jsonData.accountId);",
-                  "    console.log('Account ID saved:', jsonData.accountId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"CHECKING\",\n  \"initialDeposit\": 1000\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/accounts/open",
-              "host": ["{{baseUrl}}"],
-              "path": ["accounts", "open"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Open Savings Account",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"SAVINGS\",\n  \"initialDeposit\": 5000\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/accounts/open",
-              "host": ["{{baseUrl}}"],
-              "path": ["accounts", "open"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Open Investment Account",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"INVESTMENT\",\n  \"initialDeposit\": 10000\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/accounts/open",
-              "host": ["{{baseUrl}}"],
-              "path": ["accounts", "open"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Account by ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
               "raw": "{{baseUrl}}/accounts/{{accountId}}",
               "host": ["{{baseUrl}}"],
               "path": ["accounts", "{{accountId}}"]
-            }
+            },
+            "description": "Get detailed account information"
           },
           "response": []
         },
         {
           "name": "Get User Accounts",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/accounts/user/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["accounts", "user", "{{userId}}"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Calculate Interest",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/accounts/interest/calculate",
-              "host": ["{{baseUrl}}"],
-              "path": ["accounts", "interest", "calculate"]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin - Stock Management",
-      "item": [
-        {
-          "name": "Create Stock",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.collectionVariables.set('securityId', jsonData.stockId);",
-                  "    console.log('Security ID saved:', jsonData.stockId);",
-                  "}"
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of accounts', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "user", "{{userId}}"]
+            },
+            "description": "Get all accounts for a specific user"
+          },
+          "response": []
+        },
+        {
+          "name": "Transfer Funds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Transfer completed successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('transferId');",
+                  "    pm.expect(jsonData).to.have.property('newBalance');",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -426,334 +353,132 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"symbol\": \"AAPL\",\n  \"name\": \"Apple Inc.\",\n  \"type\": \"STOCK\",\n  \"exchange\": \"NASDAQ\",\n  \"currentPrice\": 150.50,\n  \"currency\": \"USD\"\n}"
+              "raw": "{\n  \"fromAccountId\": \"{{accountId}}\",\n  \"toIban\": \"FR7630001007941234567890185\",\n  \"amount\": 100,\n  \"description\": \"Test transfer\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/stocks",
+              "raw": "{{baseUrl}}/accounts/transfer",
               "host": ["{{baseUrl}}"],
-              "path": ["admin", "stocks"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Stock Availability",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isAvailable\": false\n}"
+              "path": ["accounts", "transfer"]
             },
-            "url": {
-              "raw": "{{baseUrl}}/admin/stocks/AAPL/availability",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "stocks", "AAPL", "availability"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete Stock",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/stocks/AAPL",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "stocks", "AAPL"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "List All Securities",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/securities",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "securities"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Security Price",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"price\": 155.75\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/securities/{{securityId}}/price",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "securities", "{{securityId}}", "price"]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin - Account Management",
-      "item": [
-        {
-          "name": "Create Account for Client",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"CHECKING\",\n  \"initialDeposit\": 2000,\n  \"name\": \"Business Account\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/accounts/create",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "create"]
-            }
+            "description": "Transfer funds between AVENIR bank accounts"
           },
           "response": []
         },
         {
           "name": "Rename Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Account renamed successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"newName\": \"Primary Checking\",\n  \"requestedBy\": \"{{adminId}}\"\n}"
+              "raw": "{\n  \"newName\": \"My Personal Account\",\n  \"userId\": \"{{userId}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}/rename",
+              "raw": "{{baseUrl}}/accounts/{{accountId}}/rename",
               "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "{{accountId}}", "rename"]
-            }
+              "path": ["accounts", "{{accountId}}", "rename"]
+            },
+            "description": "Client renames their own account"
           },
           "response": []
         },
         {
-          "name": "Ban Account",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+          "name": "Delete Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Account deleted successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"Suspicious activity detected\",\n  \"bannedBy\": \"{{adminId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}/ban",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "{{accountId}}", "ban"]
             }
-          },
-          "response": []
-        },
-        {
-          "name": "Close Account",
+          ],
           "request": {
             "method": "DELETE",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Account closure requested\",\n  \"closedBy\": \"{{adminId}}\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"reason\": \"No longer needed\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}",
+              "raw": "{{baseUrl}}/accounts/{{accountId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["admin", "accounts", "{{accountId}}"]
-            }
+              "path": ["accounts", "{{accountId}}"]
+            },
+            "description": "Client deletes their own account"
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin - Savings Rates",
-      "item": [
+        },
         {
-          "name": "Update Savings Rate",
+          "name": "Calculate Interest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Interest calculation completed', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"accountType\": \"SAVINGS\",\n  \"rate\": 0.025,\n  \"minBalance\": 1000,\n  \"effectiveDate\": \"2024-01-01T00:00:00.000Z\"\n}"
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/interest/calculate",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "interest", "calculate"]
             },
-            "url": {
-              "raw": "{{baseUrl}}/admin/savings-rate",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "savings-rate"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Savings Rates",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/savings-rates",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "savings-rates"]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin - User Management",
-      "item": [
-        {
-          "name": "List All Users",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/users",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "users"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update User Role",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"MANAGER\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/admin/users/{{userId}}/role",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "users", "{{userId}}", "role"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Dashboard Stats",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/dashboard",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "dashboard"]
-            }
+            "description": "Calculate and apply interest to savings accounts"
           },
           "response": []
         }
@@ -763,17 +488,22 @@
       "name": "Orders & Trading",
       "item": [
         {
-          "name": "Place Buy Order",
+          "name": "Place Order",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Order placed successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('orderId');",
+                  "    pm.expect(jsonData).to.have.property('status');",
                   "    pm.collectionVariables.set('orderId', jsonData.orderId);",
-                  "    console.log('Order ID saved:', jsonData.orderId);",
-                  "}"
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -785,119 +515,181 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"securityId\": \"{{securityId}}\",\n  \"type\": \"BUY\",\n  \"quantity\": 10,\n  \"price\": 155\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"securityId\": \"{{securityId}}\",\n  \"type\": \"BUY\",\n  \"quantity\": 10,\n  \"price\": 180.50\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/orders",
               "host": ["{{baseUrl}}"],
               "path": ["orders"]
-            }
+            },
+            "description": "Place a buy or sell order"
           },
           "response": []
         },
         {
-          "name": "Get Order by ID",
+          "name": "Get Order Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Order details returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('type');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/orders/{{orderId}}",
               "host": ["{{baseUrl}}"],
               "path": ["orders", "{{orderId}}"]
-            }
+            },
+            "description": "Get detailed order information"
           },
           "response": []
         },
         {
           "name": "Get User Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of orders', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/orders/user/{{userId}}",
               "host": ["{{baseUrl}}"],
               "path": ["orders", "user", "{{userId}}"]
-            }
+            },
+            "description": "Get all orders for a specific user"
           },
           "response": []
         },
         {
           "name": "Get Order Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Order book has buy and sell orders', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('buyOrders');",
+                  "    pm.expect(jsonData).to.have.property('sellOrders');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/orders/security/{{securityId}}/book",
               "host": ["{{baseUrl}}"],
               "path": ["orders", "security", "{{securityId}}", "book"]
-            }
+            },
+            "description": "Get order book for a security"
           },
           "response": []
         },
         {
-          "name": "Get Account Trades",
+          "name": "Get Executed Trades",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of trades', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/orders/account/{{accountId}}/trades",
               "host": ["{{baseUrl}}"],
               "path": ["orders", "account", "{{accountId}}", "trades"]
-            }
+            },
+            "description": "Get all executed trades for an account"
           },
           "response": []
         },
         {
           "name": "Cancel Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Order cancelled successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"reason\": \"Changed my mind\"\n}"
-            },
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/orders/{{orderId}}",
               "host": ["{{baseUrl}}"],
               "path": ["orders", "{{orderId}}"]
-            }
+            },
+            "description": "Cancel a pending order"
           },
           "response": []
         }
@@ -913,11 +705,16 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const jsonData = pm.response.json();",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Loan granted successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('loanId');",
+                  "    pm.expect(jsonData).to.have.property('monthlyPayment');",
                   "    pm.collectionVariables.set('loanId', jsonData.loanId);",
-                  "    console.log('Loan ID saved:', jsonData.loanId);",
-                  "}"
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -929,119 +726,194 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"principal\": 50000,\n  \"annualRate\": 0.05,\n  \"termMonths\": 240,\n  \"insuranceRate\": 0.003\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountId\": \"{{accountId}}\",\n  \"principal\": 25000,\n  \"annualRate\": 0.055,\n  \"termMonths\": 36,\n  \"insuranceRate\": 0.01\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/loans/grant",
               "host": ["{{baseUrl}}"],
               "path": ["loans", "grant"]
-            }
+            },
+            "description": "Grant a loan with constant monthly payment and insurance"
           },
           "response": []
         },
         {
           "name": "Get Loan Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Loan details returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('principal');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/loans/{{loanId}}",
               "host": ["{{baseUrl}}"],
               "path": ["loans", "{{loanId}}"]
-            }
+            },
+            "description": "Get detailed loan information"
           },
           "response": []
         },
         {
           "name": "Get Amortization Schedule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Schedule is an array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "    pm.expect(jsonData.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/loans/{{loanId}}/schedule",
               "host": ["{{baseUrl}}"],
               "path": ["loans", "{{loanId}}", "schedule"]
-            }
+            },
+            "description": "Get loan amortization schedule"
           },
           "response": []
         },
         {
           "name": "Get User Loans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of loans', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/loans/user/{{userId}}",
               "host": ["{{baseUrl}}"],
               "path": ["loans", "user", "{{userId}}"]
-            }
+            },
+            "description": "Get all loans for a specific user"
           },
           "response": []
         },
         {
-          "name": "Calculate Loan Payment",
+          "name": "Calculate Loan Payment Preview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Payment calculation returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('monthlyPayment');",
+                  "    pm.expect(jsonData).to.have.property('totalPayment');",
+                  "    pm.expect(jsonData).to.have.property('totalInterest');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"principal\": 100000,\n  \"annualRate\": 0.04,\n  \"termMonths\": 360,\n  \"insuranceRate\": 0.003\n}"
+              "raw": "{\n  \"principal\": 25000,\n  \"annualRate\": 0.055,\n  \"termMonths\": 36,\n  \"insuranceRate\": 0.01\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/loans/{{loanId}}/calculate-payment",
               "host": ["{{baseUrl}}"],
               "path": ["loans", "{{loanId}}", "calculate-payment"]
-            }
+            },
+            "description": "Calculate loan payment without creating a loan"
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Messages",
+      "name": "Messages & Chat",
       "item": [
         {
           "name": "Get Conversations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of conversations', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "    if (jsonData.length > 0) {",
+                  "        pm.collectionVariables.set('conversationId', jsonData[0].id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/messages/conversations?userId={{userId}}",
               "host": ["{{baseUrl}}"],
@@ -1052,44 +924,66 @@
                   "value": "{{userId}}"
                 }
               ]
-            }
+            },
+            "description": "Get all conversations for a user"
           },
           "response": []
         },
         {
           "name": "Get Conversation Messages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of messages', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/messages/conversations/{{conversationId}}?limit=50",
+              "raw": "{{baseUrl}}/messages/conversations/{{conversationId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["messages", "conversations", "{{conversationId}}"],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "50"
-                }
-              ]
-            }
+              "path": ["messages", "conversations", "{{conversationId}}"]
+            },
+            "description": "Get all messages in a conversation"
           },
           "response": []
         },
         {
           "name": "Get Unread Message Count",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns unread count', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('unreadCount');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/messages/unread?userId={{userId}}",
               "host": ["{{baseUrl}}"],
@@ -1100,7 +994,8 @@
                   "value": "{{userId}}"
                 }
               ]
-            }
+            },
+            "description": "Get count of unread messages"
           },
           "response": []
         }
@@ -1110,17 +1005,68 @@
       "name": "Notifications",
       "item": [
         {
-          "name": "Get Notifications",
+          "name": "Get All Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of notifications', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/notifications?userId={{userId}}&unreadOnly=false",
+              "raw": "{{baseUrl}}/notifications?userId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Get all notifications for a user"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of unread notifications', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?userId={{userId}}&unreadOnly=true",
               "host": ["{{baseUrl}}"],
               "path": ["notifications"],
               "query": [
@@ -1130,23 +1076,37 @@
                 },
                 {
                   "key": "unreadOnly",
-                  "value": "false"
+                  "value": "true"
                 }
               ]
-            }
+            },
+            "description": "Get only unread notifications"
           },
           "response": []
         },
         {
           "name": "Get Unread Count",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns unread count', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('unreadCount');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/notifications/unread-count?userId={{userId}}",
               "host": ["{{baseUrl}}"],
@@ -1157,55 +1117,671 @@
                   "value": "{{userId}}"
                 }
               ]
-            }
+            },
+            "description": "Get count of unread notifications"
           },
           "response": []
         },
         {
-          "name": "Mark Notification Read",
+          "name": "Mark Notification as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Notification marked as read', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "raw": "{{baseUrl}}/notifications/:notificationId/read",
               "host": ["{{baseUrl}}"],
-              "path": ["notifications", "{{notificationId}}", "read"]
-            }
+              "path": ["notifications", ":notificationId", "read"],
+              "variable": [
+                {
+                  "key": "notificationId",
+                  "value": "notification-id"
+                }
+              ]
+            },
+            "description": "Mark a notification as read"
           },
           "response": []
         },
         {
-          "name": "Mark All Notifications Read",
+          "name": "Mark All as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('All notifications marked as read', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('updatedCount');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all?userId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "read-all"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Mark all notifications as read for a user"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Create Security/Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Security created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('security');",
+                  "    if (jsonData.security) {",
+                  "        pm.collectionVariables.set('securityId', jsonData.security.id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+              "raw": "{\n  \"symbol\": \"AAPL\",\n  \"name\": \"Apple Inc.\",\n  \"type\": \"STOCK\",\n  \"exchange\": \"NASDAQ\",\n  \"currentPrice\": 180.50,\n  \"currency\": \"USD\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/notifications/read-all",
+              "raw": "{{baseUrl}}/admin/securities",
               "host": ["{{baseUrl}}"],
-              "path": ["notifications", "read-all"]
+              "path": ["admin", "securities"]
+            },
+            "description": "Create a new security (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Securities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of securities', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/securities",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "securities"]
+            },
+            "description": "Get all securities (Admin/Manager)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Stock created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"GOOGL\",\n  \"name\": \"Alphabet Inc.\",\n  \"type\": \"STOCK\",\n  \"exchange\": \"NASDAQ\",\n  \"currentPrice\": 140.25,\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/stocks",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "stocks"]
+            },
+            "description": "Create a new stock (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Stock Availability",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stock availability updated', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isAvailable\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/stocks/:symbol/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "stocks", ":symbol", "availability"],
+              "variable": [
+                {
+                  "key": "symbol",
+                  "value": "GOOGL"
+                }
+              ]
+            },
+            "description": "Update stock availability (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stock deleted successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stocks/:symbol",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "stocks", ":symbol"],
+              "variable": [
+                {
+                  "key": "symbol",
+                  "value": "GOOGL"
+                }
+              ]
+            },
+            "description": "Delete a stock (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Savings Rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Savings rate updated and users notified', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('notifiedUsers');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountType\": \"SAVINGS\",\n  \"rate\": 0.035,\n  \"minBalance\": 1000,\n  \"effectiveDate\": \"2026-02-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/savings-rate",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "savings-rate"]
+            },
+            "description": "Update savings interest rate with user notifications (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Savings Rates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of savings rates', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/savings-rates",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "savings-rates"]
+            },
+            "description": "Get all savings rates (Admin/Manager)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User role updated', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.user).to.have.property('role');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"MANAGER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", ":userId", "role"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Update user role (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array of users', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"]
+            },
+            "description": "Get all users (Admin/Manager)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dashboard Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Dashboard stats returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('users');",
+                  "    pm.expect(jsonData).to.have.property('accounts');",
+                  "    pm.expect(jsonData).to.have.property('orders');",
+                  "    pm.expect(jsonData).to.have.property('loans');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard"]
+            },
+            "description": "Get dashboard statistics (Admin/Manager)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Account for Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Account created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('accountId');",
+                  "    pm.expect(jsonData).to.have.property('iban');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"accountType\": \"SAVINGS\",\n  \"initialDeposit\": 5000,\n  \"name\": \"Director Created Account\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/accounts/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "accounts", "create"]
+            },
+            "description": "Admin creates account for client"
+          },
+          "response": []
+        },
+        {
+          "name": "Rename Account (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Account renamed successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newName\": \"Admin Renamed Account\",\n  \"requestedBy\": \"admin-user-id\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/accounts-rename/{{accountId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "accounts-rename", "{{accountId}}"]
+            },
+            "description": "Admin renames client account"
+          },
+          "response": []
+        },
+        {
+          "name": "Ban Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Account banned successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Suspicious activity\",\n  \"bannedBy\": \"admin-user-id\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}/ban",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "accounts", "{{accountId}}", "ban"]
+            },
+            "description": "Admin bans a client account"
+          },
+          "response": []
+        },
+        {
+          "name": "Close Account (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Account closed successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Account closure requested\",\n  \"closedBy\": \"admin-user-id\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/accounts/{{accountId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "accounts", "{{accountId}}"]
+            },
+            "description": "Admin closes a client account"
           },
           "response": []
         }
       ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
     }
   ]
 }

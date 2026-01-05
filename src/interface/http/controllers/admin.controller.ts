@@ -1,5 +1,5 @@
 import { Controller, Post, Put, Body, UseGuards, Get, Param, Delete, ConflictException, NotFoundException } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, EventBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
 import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infrastructure/auth/guards/roles.guard.js';
@@ -15,6 +15,7 @@ import {
   BanAccountCommand, 
   CloseAccountCommand 
 } from '../../../application/commands/account-management.commands.js';
+import { SavingsRateChangedEvent } from '../../../domain/entities/events/savings-rate-changed.event.js';
 
 /**
  * Admin Controller
@@ -30,6 +31,7 @@ export class AdminController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly commandBus: CommandBus,
+    private readonly eventBus: EventBus,
   ) {}
 
   /**
@@ -67,27 +69,10 @@ export class AdminController {
   }
 
   /**
-   * Update security price
+   * NOTE: Stock price update endpoint REMOVED per assignment requirement
+   * "Je n'ai pas la possibilité de modifier le cours d'une action"
+   * Stock prices are determined by the order matching engine (supply & demand)
    */
-  @Put('securities/:id/price')
-  @Roles('ADMIN', 'MANAGER')
-  async updateSecurityPrice(
-    @Param('id') id: string,
-    @Body() dto: { price: number },
-  ) {
-    const security = await this.prisma.security.update({
-      where: { id },
-      data: {
-        currentPrice: dto.price,
-        lastUpdated: new Date(),
-      },
-    });
-
-    return {
-      message: 'Security price updated',
-      security,
-    };
-  }
 
   /**
    * Get all securities
@@ -102,6 +87,8 @@ export class AdminController {
 
   /**
    * Update savings interest rate (DIRECTOR only)
+   * Per assignment: "tous les clients ayant actuellement un compte d'épargne 
+   * doivent avoir une notification en ce qui concerne le changement du taux"
    */
   @Post('savings-rate')
   @Roles('ADMIN')
@@ -123,13 +110,42 @@ export class AdminController {
       },
     });
 
-    // TODO: Publish SAVINGS_RATE_CHANGED event for notifications
-    // const event = new SavingsRateChangedEvent(...)
-    // this.eventBus.publish(event);
+    // Notify all clients with savings accounts about the rate change
+    const savingsAccounts = await this.prisma.bankAccount.findMany({
+      where: { accountType: 'SAVINGS' },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+
+    const ratePercentage = (dto.rate * 100).toFixed(2);
+    
+    // Create notifications for all affected users
+    const notificationPromises = savingsAccounts.map(account =>
+      this.prisma.notification.create({
+        data: {
+          userId: account.userId,
+          title: 'Taux d\'épargne modifié',
+          message: `Le nouveau taux d'épargne est de ${ratePercentage}%. Ce taux prend effet à partir du ${new Date(dto.effectiveDate).toLocaleDateString('fr-FR')}.`,
+          type: 'SAVINGS_RATE_CHANGED',
+        },
+      })
+    );
+
+    await Promise.all(notificationPromises);
+
+    // Publish event for SSE/WebSocket real-time notifications
+    this.eventBus.publish(new SavingsRateChangedEvent(
+      dto.accountType,
+      0, // Old rate not tracked, set to 0
+      dto.rate,
+      dto.minBalance,
+      new Date(dto.effectiveDate),
+    ));
 
     return {
       message: 'Savings rate updated successfully',
       savingsRate,
+      notifiedUsers: savingsAccounts.length,
     };
   }
 

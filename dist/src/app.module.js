@@ -14,6 +14,7 @@ const app_service_1 = require("./app.service");
 const prisma_module_1 = require("./infrastructure/database/prisma/prisma.module");
 const auth_module_1 = require("./infrastructure/auth/auth.module");
 const event_store_module_1 = require("./infrastructure/event-store/event-store.module");
+const repository_module_1 = require("./infrastructure/repositories/repository.module");
 const user_module_1 = require("./application/user.module");
 const account_module_1 = require("./application/account.module");
 const investment_module_1 = require("./application/investment.module");
@@ -31,6 +32,7 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,
             event_store_module_1.EventStoreModule,
+            repository_module_1.RepositoryModule,
             user_module_1.UserModule,
             account_module_1.AccountModule,
             investment_module_1.InvestmentModule,

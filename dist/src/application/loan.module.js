@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const cqrs_1 = require("@nestjs/cqrs");
 const prisma_module_js_1 = require("../infrastructure/database/prisma/prisma.module.js");
 const event_store_module_js_1 = require("../infrastructure/event-store/event-store.module.js");
+const auth_module_js_1 = require("../infrastructure/auth/auth.module.js");
 const loan_controller_js_1 = require("../interface/http/controllers/loan.controller.js");
 const grant_loan_handler_js_1 = require("./use-cases/grant-loan.handler.js");
 const loan_projector_js_1 = require("./event-handlers/loan-projector.js");
@@ -21,7 +22,7 @@ let LoanModule = class LoanModule {
 exports.LoanModule = LoanModule;
 exports.LoanModule = LoanModule = __decorate([
     (0, common_1.Module)({
-        imports: [cqrs_1.CqrsModule, prisma_module_js_1.PrismaModule, event_store_module_js_1.EventStoreModule],
+        imports: [cqrs_1.CqrsModule, prisma_module_js_1.PrismaModule, event_store_module_js_1.EventStoreModule, auth_module_js_1.AuthModule],
         controllers: [loan_controller_js_1.LoanController],
         providers: [...CommandHandlers, ...EventHandlers],
     })

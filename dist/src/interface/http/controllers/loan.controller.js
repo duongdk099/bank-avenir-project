@@ -17,6 +17,9 @@ const common_1 = require("@nestjs/common");
 const cqrs_1 = require("@nestjs/cqrs");
 const grant_loan_command_js_1 = require("../../../application/commands/grant-loan.command.js");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
+const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/jwt-auth.guard.js");
+const roles_guard_js_1 = require("../../../infrastructure/auth/guards/roles.guard.js");
+const roles_decorator_js_1 = require("../../../infrastructure/auth/decorators/roles.decorator.js");
 let LoanController = class LoanController {
     commandBus;
     prisma;
@@ -86,6 +89,8 @@ let LoanController = class LoanController {
 exports.LoanController = LoanController;
 __decorate([
     (0, common_1.Post)('grant'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
+    (0, roles_decorator_js_1.Roles)('MANAGER'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),

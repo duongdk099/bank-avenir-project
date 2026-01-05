@@ -17,4 +17,5 @@ export declare class OrderMatchingService {
         bestBid: number | null;
         bestAsk: number | null;
     }>;
+    private updateSecurityPrice;
 }

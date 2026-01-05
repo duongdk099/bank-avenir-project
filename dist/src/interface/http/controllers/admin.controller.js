@@ -21,12 +21,15 @@ const roles_guard_js_1 = require("../../../infrastructure/auth/guards/roles.guar
 const roles_decorator_js_1 = require("../../../infrastructure/auth/decorators/roles.decorator.js");
 const manage_stock_commands_js_1 = require("../../../application/commands/manage-stock.commands.js");
 const account_management_commands_js_1 = require("../../../application/commands/account-management.commands.js");
+const savings_rate_changed_event_js_1 = require("../../../domain/entities/events/savings-rate-changed.event.js");
 let AdminController = class AdminController {
     prisma;
     commandBus;
-    constructor(prisma, commandBus) {
+    eventBus;
+    constructor(prisma, commandBus, eventBus) {
         this.prisma = prisma;
         this.commandBus = commandBus;
+        this.eventBus = eventBus;
     }
     async createSecurity(dto) {
         const security = await this.prisma.security.create({
@@ -45,19 +48,6 @@ let AdminController = class AdminController {
             security,
         };
     }
-    async updateSecurityPrice(id, dto) {
-        const security = await this.prisma.security.update({
-            where: { id },
-            data: {
-                currentPrice: dto.price,
-                lastUpdated: new Date(),
-            },
-        });
-        return {
-            message: 'Security price updated',
-            security,
-        };
-    }
     async getAllSecurities() {
         return await this.prisma.security.findMany({
             orderBy: { symbol: 'asc' },
@@ -72,9 +62,26 @@ let AdminController = class AdminController {
                 effectiveDate: new Date(dto.effectiveDate),
             },
         });
+        const savingsAccounts = await this.prisma.bankAccount.findMany({
+            where: { accountType: 'SAVINGS' },
+            select: { userId: true },
+            distinct: ['userId'],
+        });
+        const ratePercentage = (dto.rate * 100).toFixed(2);
+        const notificationPromises = savingsAccounts.map(account => this.prisma.notification.create({
+            data: {
+                userId: account.userId,
+                title: 'Taux d\'épargne modifié',
+                message: `Le nouveau taux d'épargne est de ${ratePercentage}%. Ce taux prend effet à partir du ${new Date(dto.effectiveDate).toLocaleDateString('fr-FR')}.`,
+                type: 'SAVINGS_RATE_CHANGED',
+            },
+        }));
+        await Promise.all(notificationPromises);
+        this.eventBus.publish(new savings_rate_changed_event_js_1.SavingsRateChangedEvent(dto.accountType, 0, dto.rate, dto.minBalance, new Date(dto.effectiveDate)));
         return {
             message: 'Savings rate updated successfully',
             savingsRate,
+            notifiedUsers: savingsAccounts.length,
         };
     }
     async getSavingsRates() {
@@ -240,15 +247,6 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "createSecurity", null);
 __decorate([
-    (0, common_1.Put)('securities/:id/price'),
-    (0, roles_decorator_js_1.Roles)('ADMIN', 'MANAGER'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], AdminController.prototype, "updateSecurityPrice", null);
-__decorate([
     (0, common_1.Get)('securities'),
     (0, roles_decorator_js_1.Roles)('ADMIN', 'MANAGER'),
     __metadata("design:type", Function),
@@ -357,6 +355,7 @@ exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
     __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
-        cqrs_1.CommandBus])
+        cqrs_1.CommandBus,
+        cqrs_1.EventBus])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from '../infrastructure/database/prisma/prisma.module.js';
 import { EventStoreModule } from '../infrastructure/event-store/event-store.module.js';
+import { AuthModule } from '../infrastructure/auth/auth.module.js';
 
 // Controllers
 import { AccountController } from '../interface/http/controllers/account.controller.js';
@@ -13,6 +14,7 @@ import { InterestCalculationService } from './services/interest-calculation.serv
 
 // Command Handlers
 import { OpenAccountHandler } from './use-cases/open-account.handler.js';
+import { ClientRenameAccountHandler, ClientDeleteAccountHandler } from './use-cases/client-account.handlers.js';
 
 // Event Handlers (Projectors)
 import {
@@ -24,7 +26,11 @@ import {
   InterestAppliedHandler,
 } from './event-handlers/account-projector.js';
 
-const CommandHandlers = [OpenAccountHandler];
+const CommandHandlers = [
+  OpenAccountHandler,
+  ClientRenameAccountHandler,
+  ClientDeleteAccountHandler,
+];
 
 const EventHandlers = [
   AccountOpenedHandler,
@@ -38,7 +44,7 @@ const EventHandlers = [
 const Services = [IbanService, InterestCalculationService];
 
 @Module({
-  imports: [CqrsModule, PrismaModule, EventStoreModule, ScheduleModule.forRoot()],
+  imports: [CqrsModule, PrismaModule, EventStoreModule, AuthModule, ScheduleModule.forRoot()],
   controllers: [AccountController],
   providers: [...CommandHandlers, ...EventHandlers, ...Services],
   exports: [IbanService, InterestCalculationService],

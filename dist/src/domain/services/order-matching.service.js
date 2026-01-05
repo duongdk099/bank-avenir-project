@@ -65,6 +65,7 @@ let OrderMatchingService = OrderMatchingService_1 = class OrderMatchingService {
                 matchOrder.execute(newOrder.getId(), executionQuantity, executionPrice);
                 await this.eventStore.save(newOrder, 'Order');
                 await this.eventStore.save(matchOrder, 'Order');
+                await this.updateSecurityPrice(newOrder.getSecurityId(), executionPrice);
                 matchesFound++;
                 this.logger.log(`Matched orders ${newOrder.getId()} and ${matchOrder.getId()}: ` +
                     `${executionQuantity} shares at ${executionPrice}€`);
@@ -134,6 +135,16 @@ let OrderMatchingService = OrderMatchingService_1 = class OrderMatchingService {
             bestBid: bestBuy ? bestBuy.price.toNumber() : null,
             bestAsk: bestSell ? bestSell.price.toNumber() : null,
         };
+    }
+    async updateSecurityPrice(securityId, executionPrice) {
+        await this.prisma.security.update({
+            where: { id: securityId },
+            data: {
+                currentPrice: executionPrice,
+                lastUpdated: new Date(),
+            },
+        });
+        this.logger.log(`Security ${securityId} price updated to ${executionPrice}€`);
     }
 };
 exports.OrderMatchingService = OrderMatchingService;

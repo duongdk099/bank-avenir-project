@@ -16,8 +16,10 @@ exports.AccountController = void 0;
 const common_1 = require("@nestjs/common");
 const cqrs_1 = require("@nestjs/cqrs");
 const open_account_command_js_1 = require("../../../application/commands/open-account.command.js");
+const client_account_commands_js_1 = require("../../../application/commands/client-account.commands.js");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
 const interest_calculation_service_js_1 = require("../../../application/services/interest-calculation.service.js");
+const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/jwt-auth.guard.js");
 let AccountController = class AccountController {
     commandBus;
     prisma;
@@ -60,6 +62,43 @@ let AccountController = class AccountController {
             ...result,
         };
     }
+    async renameAccount(id, dto) {
+        const account = await this.prisma.bankAccount.findUnique({
+            where: { id },
+        });
+        if (!account) {
+            throw new common_1.NotFoundException('Account not found');
+        }
+        if (account.userId !== dto.userId) {
+            throw new common_1.ForbiddenException('You can only rename your own accounts');
+        }
+        const command = new client_account_commands_js_1.ClientRenameAccountCommand(id, dto.newName, dto.userId);
+        await this.commandBus.execute(command);
+        return {
+            success: true,
+            message: 'Account renamed successfully',
+        };
+    }
+    async deleteAccount(id, dto) {
+        const account = await this.prisma.bankAccount.findUnique({
+            where: { id },
+        });
+        if (!account) {
+            throw new common_1.NotFoundException('Account not found');
+        }
+        if (account.userId !== dto.userId) {
+            throw new common_1.ForbiddenException('You can only delete your own accounts');
+        }
+        if (account.balance.toNumber() !== 0) {
+            throw new common_1.ForbiddenException('Account must have zero balance before deletion. Please withdraw or transfer all funds.');
+        }
+        const command = new client_account_commands_js_1.ClientDeleteAccountCommand(id, dto.userId, dto.reason || 'Client requested deletion');
+        await this.commandBus.execute(command);
+        return {
+            success: true,
+            message: 'Account deleted successfully',
+        };
+    }
 };
 exports.AccountController = AccountController;
 __decorate([
@@ -89,6 +128,24 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], AccountController.prototype, "calculateInterest", null);
+__decorate([
+    (0, common_1.Put)(':id/rename'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AccountController.prototype, "renameAccount", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AccountController.prototype, "deleteAccount", null);
 exports.AccountController = AccountController = __decorate([
     (0, common_1.Controller)('accounts'),
     __metadata("design:paramtypes", [cqrs_1.CommandBus,

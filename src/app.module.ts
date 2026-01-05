@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
 import { AuthModule } from './infrastructure/auth/auth.module';
 import { EventStoreModule } from './infrastructure/event-store/event-store.module';
+import { RepositoryModule } from './infrastructure/repositories/repository.module';
 
 // Domain Modules
 import { UserModule } from './application/user.module';
@@ -26,6 +27,7 @@ import { AdminModule } from './application/admin.module';
     PrismaModule,
     AuthModule,
     EventStoreModule,
+    RepositoryModule,
     
     // Domain Modules
     UserModule,

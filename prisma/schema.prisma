@@ -11,6 +11,10 @@ datasource db {
 
 // ==================== ENUMS ====================
 
+// UserRole mapping to assignment requirements:
+// - CLIENT: Client de la banque
+// - ADMIN: Directeur de banque (full admin privileges)
+// - MANAGER: Conseiller bancaire (can grant loans, handle chat)
 enum UserRole {
   CLIENT
   ADMIN
