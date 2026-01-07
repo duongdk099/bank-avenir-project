@@ -94,7 +94,7 @@ export class LoanController {
     return loans;
   }
 
-  @Post(':id/calculate-payment')
+  @Post('calculate-payment/preview')
   async calculatePayment(
     @Body()
     dto: {

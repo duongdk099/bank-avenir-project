@@ -124,8 +124,8 @@ export class AdminController {
       this.prisma.notification.create({
         data: {
           userId: account.userId,
-          title: 'Taux d\'épargne modifié',
-          message: `Le nouveau taux d'épargne est de ${ratePercentage}%. Ce taux prend effet à partir du ${new Date(dto.effectiveDate).toLocaleDateString('fr-FR')}.`,
+          title: 'Savings Rate Updated',
+          message: `The new savings rate is ${ratePercentage}%. This rate takes effect from ${new Date(dto.effectiveDate).toLocaleDateString('en-US')}.`,
           type: 'SAVINGS_RATE_CHANGED',
         },
       })

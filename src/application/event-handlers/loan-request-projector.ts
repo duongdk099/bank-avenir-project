@@ -39,8 +39,8 @@ export class LoanRequestedHandler implements IEventHandler<LoanRequestedEvent> {
 
     const notifications = managers.map((manager) => ({
       userId: manager.id,
-      title: 'Nouvelle demande de crédit',
-      message: `Un client a demandé un crédit de ${event.requestedAmount}€ sur ${event.termMonths} mois. Motif: ${event.purpose}`,
+      title: 'New Loan Request',
+      message: `A client has requested a loan of €${event.requestedAmount} over ${event.termMonths} months. Purpose: ${event.purpose}`,
       type: 'LOAN_REQUEST',
       metadata: JSON.stringify({ loanRequestId: event.aggregateId }),
     }));
@@ -78,8 +78,8 @@ export class LoanRequestAssignedHandler implements IEventHandler<LoanRequestAssi
       await this.prisma.notification.create({
         data: {
           userId: loanRequest.userId,
-          title: 'Demande de crédit prise en charge',
-          message: `Votre demande de crédit de ${loanRequest.requestedAmount}€ a été prise en charge par un conseiller. Vous pouvez maintenant discuter avec lui.`,
+          title: 'Loan Request Assigned',
+          message: `Your loan request for €${loanRequest.requestedAmount} has been assigned to an advisor. You can now discuss with them.`,
           type: 'LOAN_REQUEST_ASSIGNED',
           metadata: JSON.stringify({ loanRequestId: event.aggregateId }),
         },
@@ -115,8 +115,8 @@ export class LoanRequestApprovedHandler implements IEventHandler<LoanRequestAppr
       await this.prisma.notification.create({
         data: {
           userId: loanRequest.userId,
-          title: 'Crédit approuvé ! 🎉',
-          message: `Félicitations ! Votre demande de crédit a été approuvée. Montant: ${event.approvedAmount}€ sur ${event.termMonths} mois au taux de ${(event.annualRate * 100).toFixed(2)}%.`,
+          title: 'Loan Approved! 🎉',
+          message: `Congratulations! Your loan request has been approved. Amount: €${event.approvedAmount} over ${event.termMonths} months at ${(event.annualRate * 100).toFixed(2)}% annual rate.`,
           type: 'LOAN_APPROVED',
           metadata: JSON.stringify({ loanRequestId: event.aggregateId }),
         },
@@ -150,8 +150,8 @@ export class LoanRequestRejectedHandler implements IEventHandler<LoanRequestReje
       await this.prisma.notification.create({
         data: {
           userId: loanRequest.userId,
-          title: 'Demande de crédit refusée',
-          message: `Votre demande de crédit a été refusée. Raison: ${event.reason}`,
+          title: 'Loan Request Rejected',
+          message: `Your loan request has been rejected. Reason: ${event.reason}`,
           type: 'LOAN_REJECTED',
           metadata: JSON.stringify({ loanRequestId: event.aggregateId }),
         },

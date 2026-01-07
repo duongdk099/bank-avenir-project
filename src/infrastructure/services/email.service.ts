@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
 
@@ -10,14 +11,26 @@ import { Transporter } from 'nodemailer';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: Transporter;
+  private readonly appUrl: string;
 
-  constructor() {
+  constructor(private configService: ConfigService) {
+    // Get APP_URL from environment or use default
+    this.appUrl = this.configService.get<string>('APP_URL') || 'http://localhost:4200';
+
     // Configure Gmail SMTP transporter
+    const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com';
+    const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
+    const smtpUser = this.configService.get<string>('SMTP_USER');
+    const smtpPassword = this.configService.get<string>('SMTP_PASSWORD');
+    const emailFrom = this.configService.get<string>('EMAIL_FROM');
+
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: smtpHost,
+      port: smtpPort,
+      secure: false,
       auth: {
-        user: 'duongvfe123@gmail.com',
-        pass: 'vpkx zkfv ixzl jipv', // Gmail App Password
+        user: smtpUser,
+        pass: smtpPassword,
       },
     });
 
@@ -42,10 +55,11 @@ export class EmailService {
     confirmationToken: string,
     userName?: string,
   ): Promise<void> {
-    const confirmationUrl = `http://localhost:3000/auth/confirm/${confirmationToken}`;
-    
+    const confirmationUrl = `${this.appUrl}/auth/confirm/${confirmationToken}`;
+    const emailFrom = this.configService.get<string>('EMAIL_FROM') || 'noreply@avenir-bank.fr';
+
     const mailOptions = {
-      from: 'Banque AVENIR <duongvfe123@gmail.com>',
+      from: `Banque AVENIR <${emailFrom}>`,
       to: email,
       subject: 'Confirm Your Email - Banque AVENIR',
       html: this.getConfirmationEmailTemplate(confirmationUrl, userName),
@@ -72,8 +86,10 @@ export class EmailService {
     newRate: number,
     userName?: string,
   ): Promise<void> {
+    const emailFrom = this.configService.get<string>('EMAIL_FROM') || 'noreply@avenir-bank.fr';
+
     const mailOptions = {
-      from: 'Banque AVENIR <duongvfe123@gmail.com>',
+      from: `Banque AVENIR <${emailFrom}>`,
       to: email,
       subject: 'Savings Rate Update - Banque AVENIR',
       html: `

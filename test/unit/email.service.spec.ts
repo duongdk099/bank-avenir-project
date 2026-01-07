@@ -31,7 +31,7 @@ describe('EmailService', () => {
 
       expect(sendMailSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: 'Banque AVENIR <duongvfe123@gmail.com>',
+          from: 'Banque AVENIR <noreply.monavenirbank@gmail.com>',
           to: email,
           subject: 'Confirm Your Email - Banque AVENIR',
         }),
