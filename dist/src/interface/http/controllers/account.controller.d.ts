@@ -6,6 +6,16 @@ export declare class AccountController {
     private readonly prisma;
     private readonly interestService;
     constructor(commandBus: CommandBus, prisma: PrismaService, interestService: InterestCalculationService);
+    transfer(dto: {
+        fromAccountId: string;
+        toIban: string;
+        amount: number;
+        description?: string;
+    }): Promise<{
+        message: string;
+        transferId: string;
+        newBalance: number;
+    }>;
     openAccount(dto: {
         userId: string;
         accountType: string;
@@ -24,11 +34,11 @@ export declare class AccountController {
             balanceAfter: import("@prisma/client-runtime-utils").Decimal;
         }[];
     } & {
+        name: string | null;
         id: string;
         status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string | null;
         userId: string;
         iban: string;
         accountType: import("@prisma/client").$Enums.AccountType;
@@ -36,11 +46,11 @@ export declare class AccountController {
         currency: string;
     }) | null>;
     getUserAccounts(userId: string): Promise<{
+        name: string | null;
         id: string;
         status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string | null;
         userId: string;
         iban: string;
         accountType: import("@prisma/client").$Enums.AccountType;

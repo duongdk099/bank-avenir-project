@@ -16,8 +16,8 @@ export declare class AdminController {
         message: string;
         security: {
             symbol: string;
-            id: string;
             name: string;
+            id: string;
             type: string;
             currency: string;
             exchange: string | null;
@@ -28,8 +28,8 @@ export declare class AdminController {
     }>;
     getAllSecurities(): Promise<{
         symbol: string;
-        id: string;
         name: string;
+        id: string;
         type: string;
         currency: string;
         exchange: string | null;

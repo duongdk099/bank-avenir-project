@@ -13,10 +13,10 @@ export declare class MessageController {
             id: string;
             createdAt: Date;
             conversationId: string;
+            isRead: boolean;
             senderId: string;
             receiverId: string;
             content: string;
-            isRead: boolean;
         };
         createdAt: Date;
     }[]>;
@@ -31,4 +31,12 @@ export declare class MessageController {
     getUnreadCount(userId: string): Promise<{
         count: number;
     }>;
+    getGroupMessages(req: any, limit?: string, conversationId?: string): Promise<{
+        id: string;
+        content: string;
+        senderId: string;
+        senderName: string;
+        senderRole: string;
+        createdAt: Date;
+    }[]>;
 }

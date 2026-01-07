@@ -3,7 +3,7 @@ import { EventBus } from '@nestjs/cqrs';
 import { Observable, Subject, fromEvent, merge } from 'rxjs';
 import { map, filter } from 'rxjs/operators';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
-import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../../../infrastructure/auth/guards/jwt-auth.guard.js';
 
 /**
  * SSE Controller for real-time notifications
@@ -57,6 +57,50 @@ export class SseController {
     }, 100);
 
     return stream.asObservable();
+  }
+
+  /**
+   * SSE endpoint for news feed (per Sujet 2)
+   * "En tant que client je dois pouvoir, sur mon espace, consulter en temps réel les actualités de ma banque"
+   *
+   * Usage: EventSource('/api/sse/feed')
+   */
+  @Sse('feed')
+  streamNewsFeed(): Observable<MessageEvent> {
+    const feedStream = new Subject<MessageEvent>();
+
+    // Send initial connection
+    setTimeout(() => {
+      feedStream.next({
+        data: JSON.stringify({
+          type: 'CONNECTED',
+          message: 'News feed connected',
+          timestamp: new Date().toISOString(),
+        }),
+      } as MessageEvent);
+    }, 100);
+
+    // Load initial news
+    this.prisma.news
+      .findMany({
+        where: { isPublished: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      })
+      .then((news) => {
+        feedStream.next({
+          data: JSON.stringify({
+            type: 'INITIAL_FEED',
+            news,
+            timestamp: new Date().toISOString(),
+          }),
+        } as MessageEvent);
+      });
+
+    // TODO: Subscribe to new news events (would need to implement news creation event)
+    // For now, clients get initial feed and can refresh
+
+    return feedStream.asObservable();
   }
 
   /**

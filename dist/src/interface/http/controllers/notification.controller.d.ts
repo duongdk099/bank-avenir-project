@@ -8,8 +8,9 @@ export declare class NotificationController {
         createdAt: Date;
         userId: string;
         type: string;
-        isRead: boolean;
         title: string;
+        isRead: boolean;
+        metadata: string | null;
     }[]>;
     markAsRead(id: string): Promise<{
         success: boolean;

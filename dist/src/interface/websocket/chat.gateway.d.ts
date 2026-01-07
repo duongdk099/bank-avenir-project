@@ -78,4 +78,34 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         newAdvisorId: string;
         error?: undefined;
     }>;
+    handleGroupMessage(client: Socket, payload: {
+        content: string;
+    }): Promise<{
+        error: string;
+        success?: undefined;
+        messageId?: undefined;
+    } | {
+        success: boolean;
+        messageId: string;
+        error?: undefined;
+    }>;
+    handleTyping(client: Socket, payload: {
+        conversationId: string;
+        isTyping: boolean;
+    }): Promise<{
+        error: string;
+        success?: undefined;
+    } | {
+        success: boolean;
+        error?: undefined;
+    }>;
+    handleGroupTyping(client: Socket, payload: {
+        isTyping: boolean;
+    }): Promise<{
+        error: string;
+        success?: undefined;
+    } | {
+        success: boolean;
+        error?: undefined;
+    }>;
 }

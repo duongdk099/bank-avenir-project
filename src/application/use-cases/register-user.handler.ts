@@ -1,12 +1,12 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { ConflictException, BadRequestException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { RegisterUserCommand } from '../commands/register-user.command.js';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service.js';
 import { AuthService } from '../../infrastructure/auth/auth.service.js';
 import { EventStore } from '../../infrastructure/event-store/event-store.service.js';
 import { UserAggregate } from '../../domain/entities/user.aggregate.js';
 import { EmailService } from '../../infrastructure/services/email.service.js';
+import { EmailVerificationToken } from '../../domain/value-objects/email-verification-token.vo.js';
 import { v4 as uuidv4 } from 'uuid';
 
 @CommandHandler(RegisterUserCommand)
@@ -18,7 +18,6 @@ export class RegisterUserHandler
     private readonly authService: AuthService,
     private readonly eventStore: EventStore,
     private readonly eventBus: EventBus,
-    private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
   ) {}
 
@@ -75,11 +74,17 @@ export class RegisterUserHandler
       },
     });
 
-    // Generate email confirmation token (valid for 24 hours)
-    const confirmationToken = this.jwtService.sign(
-      { userId, email: command.email, type: 'email_confirmation' },
-      { expiresIn: '24h' },
-    );
+    // Generate email confirmation token (simple hex token, 64 chars)
+    const verificationToken = EmailVerificationToken.generate();
+    const confirmationToken = verificationToken.getValue();
+
+    // Save confirmation token in database
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationToken: confirmationToken,
+      },
+    });
 
     // Send confirmation email
     try {

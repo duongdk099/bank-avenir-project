@@ -5,6 +5,7 @@ import { EventStoreModule } from '../infrastructure/event-store/event-store.modu
 
 // Controllers
 import { OrderController } from '../interface/http/controllers/order.controller.js';
+import { StockController } from '../interface/http/controllers/stock.controller.js';
 
 // Services
 import { OrderMatchingService } from '../domain/services/order-matching.service.js';
@@ -32,7 +33,7 @@ const Services = [OrderMatchingService];
 
 @Module({
   imports: [CqrsModule, PrismaModule, EventStoreModule],
-  controllers: [OrderController],
+  controllers: [OrderController, StockController],
   providers: [...CommandHandlers, ...EventHandlers, ...Services],
   exports: [OrderMatchingService],
 })

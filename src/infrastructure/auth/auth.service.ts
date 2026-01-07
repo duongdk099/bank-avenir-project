@@ -91,6 +91,11 @@ export class AuthService {
       throw new UnauthorizedException('Account is not active');
     }
 
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Email not verified. Please verify your email before logging in.');
+    }
+
     return {
       id: user.id,
       email: user.email,

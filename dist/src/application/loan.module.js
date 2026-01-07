@@ -14,9 +14,24 @@ const event_store_module_js_1 = require("../infrastructure/event-store/event-sto
 const auth_module_js_1 = require("../infrastructure/auth/auth.module.js");
 const loan_controller_js_1 = require("../interface/http/controllers/loan.controller.js");
 const grant_loan_handler_js_1 = require("./use-cases/grant-loan.handler.js");
+const loan_request_handlers_js_1 = require("./use-cases/loan-request.handlers.js");
 const loan_projector_js_1 = require("./event-handlers/loan-projector.js");
-const CommandHandlers = [grant_loan_handler_js_1.GrantLoanHandler];
-const EventHandlers = [loan_projector_js_1.LoanGrantedHandler, loan_projector_js_1.LoanScheduleGeneratedHandler];
+const loan_request_projector_js_1 = require("./event-handlers/loan-request-projector.js");
+const CommandHandlers = [
+    grant_loan_handler_js_1.GrantLoanHandler,
+    loan_request_handlers_js_1.RequestLoanHandler,
+    loan_request_handlers_js_1.AssignLoanRequestHandler,
+    loan_request_handlers_js_1.ApproveLoanRequestHandler,
+    loan_request_handlers_js_1.RejectLoanRequestHandler,
+];
+const EventHandlers = [
+    loan_projector_js_1.LoanGrantedHandler,
+    loan_projector_js_1.LoanScheduleGeneratedHandler,
+    loan_request_projector_js_1.LoanRequestedHandler,
+    loan_request_projector_js_1.LoanRequestAssignedHandler,
+    loan_request_projector_js_1.LoanRequestApprovedHandler,
+    loan_request_projector_js_1.LoanRequestRejectedHandler,
+];
 let LoanModule = class LoanModule {
 };
 exports.LoanModule = LoanModule;

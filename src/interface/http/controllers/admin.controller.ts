@@ -1,7 +1,7 @@
 import { Controller, Post, Put, Body, UseGuards, Get, Param, Delete, ConflictException, NotFoundException } from '@nestjs/common';
 import { CommandBus, EventBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
-import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../../../infrastructure/auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infrastructure/auth/guards/roles.guard.js';
 import { Roles } from '../../../infrastructure/auth/decorators/roles.decorator.js';
 import { 

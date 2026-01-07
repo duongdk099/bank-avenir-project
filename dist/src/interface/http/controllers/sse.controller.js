@@ -45,6 +45,34 @@ let SseController = class SseController {
         }, 100);
         return stream.asObservable();
     }
+    streamNewsFeed() {
+        const feedStream = new rxjs_1.Subject();
+        setTimeout(() => {
+            feedStream.next({
+                data: JSON.stringify({
+                    type: 'CONNECTED',
+                    message: 'News feed connected',
+                    timestamp: new Date().toISOString(),
+                }),
+            });
+        }, 100);
+        this.prisma.news
+            .findMany({
+            where: { isPublished: true },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+        })
+            .then((news) => {
+            feedStream.next({
+                data: JSON.stringify({
+                    type: 'INITIAL_FEED',
+                    news,
+                    timestamp: new Date().toISOString(),
+                }),
+            });
+        });
+        return feedStream.asObservable();
+    }
     setupEventListeners() {
         const eventBus$ = this.eventBus?.subject$ || new rxjs_1.Subject();
         eventBus$.subscribe((event) => {
@@ -197,6 +225,12 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", rxjs_1.Observable)
 ], SseController.prototype, "streamNotifications", null);
+__decorate([
+    (0, common_1.Sse)('feed'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", rxjs_1.Observable)
+], SseController.prototype, "streamNewsFeed", null);
 exports.SseController = SseController = __decorate([
     (0, common_1.Controller)('sse'),
     __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,

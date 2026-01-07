@@ -12,6 +12,7 @@ const cqrs_1 = require("@nestjs/cqrs");
 const prisma_module_js_1 = require("../infrastructure/database/prisma/prisma.module.js");
 const event_store_module_js_1 = require("../infrastructure/event-store/event-store.module.js");
 const order_controller_js_1 = require("../interface/http/controllers/order.controller.js");
+const stock_controller_js_1 = require("../interface/http/controllers/stock.controller.js");
 const order_matching_service_js_1 = require("../domain/services/order-matching.service.js");
 const place_order_handler_js_1 = require("./use-cases/place-order.handler.js");
 const cancel_order_handler_js_1 = require("./use-cases/cancel-order.handler.js");
@@ -29,7 +30,7 @@ exports.InvestmentModule = InvestmentModule;
 exports.InvestmentModule = InvestmentModule = __decorate([
     (0, common_1.Module)({
         imports: [cqrs_1.CqrsModule, prisma_module_js_1.PrismaModule, event_store_module_js_1.EventStoreModule],
-        controllers: [order_controller_js_1.OrderController],
+        controllers: [order_controller_js_1.OrderController, stock_controller_js_1.StockController],
         providers: [...CommandHandlers, ...EventHandlers, ...Services],
         exports: [order_matching_service_js_1.OrderMatchingService],
     })

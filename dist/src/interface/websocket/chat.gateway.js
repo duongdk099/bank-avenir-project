@@ -46,7 +46,8 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
         this.prisma.user.findUnique({ where: { id: userId } }).then((user) => {
             if (user && (user.role === 'ADMIN' || user.role === 'MANAGER')) {
                 client.join('advisors');
-                this.logger.log(`User ${userId} joined advisors room`);
+                client.join('group_chat');
+                this.logger.log(`User ${userId} joined advisors and group_chat rooms`);
             }
         });
     }
@@ -290,6 +291,90 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
             newAdvisorId: payload.newAdvisorId,
         };
     }
+    async handleGroupMessage(client, payload) {
+        const senderId = this.socketUsers.get(client.id);
+        if (!senderId) {
+            return { error: 'User not authenticated' };
+        }
+        const sender = await this.prisma.user.findUnique({
+            where: { id: senderId },
+            include: { profile: true },
+        });
+        if (!sender || (sender.role !== 'ADMIN' && sender.role !== 'MANAGER')) {
+            return { error: 'Only managers and admins can send group messages' };
+        }
+        const conversationId = 'global-employee-chat';
+        await this.prisma.groupConversation.upsert({
+            where: { id: conversationId },
+            create: {
+                id: conversationId,
+                name: 'Employee Chat',
+                description: 'Global chat for all AVENIR Bank employees',
+            },
+            update: {},
+        });
+        const message = await this.prisma.groupMessage.create({
+            data: {
+                id: (0, uuid_1.v4)(),
+                conversationId,
+                senderId,
+                content: payload.content,
+            },
+        });
+        this.server.to('group_chat').emit('new_group_message', {
+            id: message.id,
+            senderId,
+            senderName: `${sender.profile?.firstName} ${sender.profile?.lastName}`,
+            senderRole: sender.role,
+            content: payload.content,
+            createdAt: message.createdAt.toISOString(),
+        });
+        this.logger.log(`Group message from ${senderId} (${sender.role}): ${payload.content.substring(0, 50)}`);
+        return {
+            success: true,
+            messageId: message.id,
+        };
+    }
+    async handleTyping(client, payload) {
+        const senderId = this.socketUsers.get(client.id);
+        if (!senderId) {
+            return { error: 'User not authenticated' };
+        }
+        const conversation = await this.prisma.privateConversation.findUnique({
+            where: { id: payload.conversationId },
+        });
+        if (!conversation) {
+            return { error: 'Conversation not found' };
+        }
+        const receiverId = conversation.user1Id === senderId
+            ? conversation.user2Id
+            : conversation.user1Id;
+        this.server.to(`user:${receiverId}`).emit('user_typing', {
+            conversationId: payload.conversationId,
+            userId: senderId,
+            isTyping: payload.isTyping,
+        });
+        return { success: true };
+    }
+    async handleGroupTyping(client, payload) {
+        const senderId = this.socketUsers.get(client.id);
+        if (!senderId) {
+            return { error: 'User not authenticated' };
+        }
+        const sender = await this.prisma.user.findUnique({
+            where: { id: senderId },
+            include: { profile: true },
+        });
+        if (!sender || (sender.role !== 'ADMIN' && sender.role !== 'MANAGER')) {
+            return { error: 'Only managers and admins can use group chat' };
+        }
+        client.to('group_chat').emit('user_group_typing', {
+            userId: senderId,
+            userName: `${sender.profile?.firstName} ${sender.profile?.lastName}`,
+            isTyping: payload.isTyping,
+        });
+        return { success: true };
+    }
 };
 exports.ChatGateway = ChatGateway;
 __decorate([
@@ -336,6 +421,30 @@ __decorate([
     __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleTransferConversation", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('group_message'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleGroupMessage", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('typing'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleTyping", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('group_typing'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleGroupTyping", null);
 exports.ChatGateway = ChatGateway = ChatGateway_1 = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {

@@ -111,6 +111,9 @@ let AuthService = class AuthService {
         if (user.status !== 'ACTIVE') {
             throw new common_1.UnauthorizedException('Account is not active');
         }
+        if (!user.isEmailVerified) {
+            throw new common_1.UnauthorizedException('Email not verified. Please verify your email before logging in.');
+        }
         return {
             id: user.id,
             email: user.email,

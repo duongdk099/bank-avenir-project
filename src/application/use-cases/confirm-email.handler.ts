@@ -1,39 +1,33 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { ConfirmEmailCommand } from '../commands/confirm-email.command.js';
 import { EventStore } from '../../infrastructure/event-store/event-store.service.js';
 import { UserAggregate } from '../../domain/entities/user.aggregate.js';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service.js';
+import { EmailVerificationToken } from '../../domain/value-objects/email-verification-token.vo.js';
 
 @CommandHandler(ConfirmEmailCommand)
 export class ConfirmEmailHandler implements ICommandHandler<ConfirmEmailCommand> {
   constructor(
-    private readonly jwtService: JwtService,
     private readonly eventStore: EventStore,
     private readonly prisma: PrismaService,
   ) {}
 
   async execute(command: ConfirmEmailCommand): Promise<{ message: string; userId: string }> {
     try {
-      // Verify and decode the token
-      const payload = this.jwtService.verify(command.token);
+      // Validate token format
+      EmailVerificationToken.fromString(command.token);
 
-      // Check token type
-      if (payload.type !== 'email_confirmation') {
-        throw new BadRequestException('Invalid confirmation token');
-      }
-
-      const userId = payload.userId;
-
-      // Check if user exists
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+      // Find user by verification token
+      const user = await this.prisma.user.findFirst({
+        where: { emailVerificationToken: command.token },
       });
 
       if (!user) {
-        throw new BadRequestException('User not found');
+        throw new UnauthorizedException('Invalid or expired confirmation token');
       }
+
+      const userId = user.id;
 
       // Load user aggregate from event store
       const events = await this.eventStore.getEventsForAggregate(userId, 'User');
@@ -54,20 +48,23 @@ export class ConfirmEmailHandler implements ICommandHandler<ConfirmEmailCommand>
       // Save events
       await this.eventStore.save(userAggregate, 'User');
 
-      // Update read model (optional - can be handled by projector)
-      // For now, we'll keep the status in User table as is since email confirmation
-      // is tracked in the aggregate state
+      // Update read model - mark email as verified
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          isEmailVerified: true,
+          emailVerifiedAt: new Date(),
+          emailVerificationToken: null, // Clear the token
+        },
+      });
 
       return {
         message: 'Email confirmed successfully',
         userId,
       };
     } catch (error) {
-      if (error.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('Invalid confirmation token');
-      }
-      if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Confirmation token has expired');
+      if (error.message && error.message.includes('Invalid verification token')) {
+        throw new UnauthorizedException('Invalid confirmation token format');
       }
       throw error;
     }

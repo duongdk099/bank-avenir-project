@@ -16,8 +16,9 @@ exports.LoanController = void 0;
 const common_1 = require("@nestjs/common");
 const cqrs_1 = require("@nestjs/cqrs");
 const grant_loan_command_js_1 = require("../../../application/commands/grant-loan.command.js");
+const loan_request_commands_js_1 = require("../../../application/commands/loan-request.commands.js");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
-const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/jwt-auth.guard.js");
+const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/guards/jwt-auth.guard.js");
 const roles_guard_js_1 = require("../../../infrastructure/auth/guards/roles.guard.js");
 const roles_decorator_js_1 = require("../../../infrastructure/auth/decorators/roles.decorator.js");
 let LoanController = class LoanController {
@@ -85,6 +86,62 @@ let LoanController = class LoanController {
             totalInsurance: Math.round(monthlyInsurance * dto.termMonths * 100) / 100,
         };
     }
+    async requestLoan(req, dto) {
+        const command = new loan_request_commands_js_1.RequestLoanCommand(req.user.sub, dto.accountId, dto.requestedAmount, dto.termMonths, dto.purpose);
+        const result = await this.commandBus.execute(command);
+        return {
+            message: 'Loan request submitted successfully. A manager will review your request soon.',
+            ...result,
+        };
+    }
+    async getLoanRequests() {
+        const requests = await this.prisma.loanRequest.findMany({
+            where: {
+                status: {
+                    in: ['PENDING', 'ASSIGNED'],
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return requests;
+    }
+    async getLoanRequest(id) {
+        const request = await this.prisma.loanRequest.findUnique({
+            where: { id },
+        });
+        return request;
+    }
+    async assignLoanRequest(req, id) {
+        const command = new loan_request_commands_js_1.AssignLoanRequestCommand(id, req.user.sub);
+        const result = await this.commandBus.execute(command);
+        return {
+            message: 'Loan request assigned successfully. A private conversation has been created with the client.',
+            ...result,
+        };
+    }
+    async approveLoanRequest(req, id, dto) {
+        const command = new loan_request_commands_js_1.ApproveLoanRequestCommand(id, req.user.sub, dto.approvedAmount, dto.annualRate, dto.termMonths, dto.insuranceRate);
+        const result = await this.commandBus.execute(command);
+        return {
+            message: 'Loan approved and granted successfully.',
+            ...result,
+        };
+    }
+    async rejectLoanRequest(req, id, dto) {
+        const command = new loan_request_commands_js_1.RejectLoanRequestCommand(id, req.user.sub, dto.reason);
+        const result = await this.commandBus.execute(command);
+        return {
+            message: 'Loan request rejected.',
+            ...result,
+        };
+    }
+    async getMyLoanRequests(req) {
+        const requests = await this.prisma.loanRequest.findMany({
+            where: { userId: req.user.sub },
+            orderBy: { createdAt: 'desc' },
+        });
+        return requests;
+    }
 };
 exports.LoanController = LoanController;
 __decorate([
@@ -124,6 +181,71 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], LoanController.prototype, "calculatePayment", null);
+__decorate([
+    (0, common_1.Post)('request'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], LoanController.prototype, "requestLoan", null);
+__decorate([
+    (0, common_1.Get)('requests'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
+    (0, roles_decorator_js_1.Roles)('MANAGER', 'ADMIN'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], LoanController.prototype, "getLoanRequests", null);
+__decorate([
+    (0, common_1.Get)('requests/:id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], LoanController.prototype, "getLoanRequest", null);
+__decorate([
+    (0, common_1.Post)('requests/:id/assign'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
+    (0, roles_decorator_js_1.Roles)('MANAGER'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], LoanController.prototype, "assignLoanRequest", null);
+__decorate([
+    (0, common_1.Post)('requests/:id/approve'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
+    (0, roles_decorator_js_1.Roles)('MANAGER'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], LoanController.prototype, "approveLoanRequest", null);
+__decorate([
+    (0, common_1.Post)('requests/:id/reject'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
+    (0, roles_decorator_js_1.Roles)('MANAGER'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], LoanController.prototype, "rejectLoanRequest", null);
+__decorate([
+    (0, common_1.Get)('my-requests'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], LoanController.prototype, "getMyLoanRequests", null);
 exports.LoanController = LoanController = __decorate([
     (0, common_1.Controller)('loans'),
     __metadata("design:paramtypes", [cqrs_1.CommandBus,

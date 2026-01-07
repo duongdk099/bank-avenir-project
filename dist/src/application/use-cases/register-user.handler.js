@@ -71,6 +71,12 @@ let RegisterUserHandler = class RegisterUserHandler {
             },
         });
         const confirmationToken = this.jwtService.sign({ userId, email: command.email, type: 'email_confirmation' }, { expiresIn: '24h' });
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                emailVerificationToken: confirmationToken,
+            },
+        });
         try {
             await this.emailService.sendConfirmationEmail(command.email, confirmationToken, `${command.firstName} ${command.lastName}`);
         }

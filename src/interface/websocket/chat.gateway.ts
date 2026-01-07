@@ -46,7 +46,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
-    
+
     if (!userId) {
       this.logger.warn(`Client ${client.id} connected without userId`);
       client.disconnect();
@@ -55,17 +55,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.userSockets.set(userId, client);
     this.socketUsers.set(client.id, userId);
-    
+
     this.logger.log(`User ${userId} connected (socket: ${client.id})`);
 
     // Join user-specific room
     client.join(`user:${userId}`);
 
-    // If user is an advisor/manager, join advisor room
+    // If user is an advisor/manager, join advisor room and group chat room
     this.prisma.user.findUnique({ where: { id: userId } }).then((user) => {
       if (user && (user.role === 'ADMIN' || user.role === 'MANAGER')) {
         client.join('advisors');
-        this.logger.log(`User ${userId} joined advisors room`);
+        client.join('group_chat'); // Join group chat for employees
+        this.logger.log(`User ${userId} joined advisors and group_chat rooms`);
       }
     });
   }
@@ -459,5 +460,151 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       conversationId: payload.conversationId,
       newAdvisorId: payload.newAdvisorId,
     };
+  }
+
+  /**
+   * Handle group message (MANAGER and ADMIN only)
+   *
+   * Payload: { content: string }
+   *
+   * Per Sujet 2: "Discussion de groupe entre les employés"
+   * ADMIN messages should be visually distinguished
+   */
+  @SubscribeMessage('group_message')
+  async handleGroupMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { content: string },
+  ) {
+    const senderId = this.socketUsers.get(client.id);
+
+    if (!senderId) {
+      return { error: 'User not authenticated' };
+    }
+
+    // Verify user is MANAGER or ADMIN
+    const sender = await this.prisma.user.findUnique({
+      where: { id: senderId },
+      include: { profile: true },
+    });
+
+    if (!sender || (sender.role !== 'ADMIN' && sender.role !== 'MANAGER')) {
+      return { error: 'Only managers and admins can send group messages' };
+    }
+
+    // Ensure global employee chat conversation exists
+    const conversationId = 'global-employee-chat';
+    await this.prisma.groupConversation.upsert({
+      where: { id: conversationId },
+      create: {
+        id: conversationId,
+        name: 'Employee Chat',
+        description: 'Global chat for all AVENIR Bank employees',
+      },
+      update: {},
+    });
+
+    // Create group message in database
+    const message = await this.prisma.groupMessage.create({
+      data: {
+        id: uuidv4(),
+        conversationId,
+        senderId,
+        content: payload.content,
+      },
+    });
+
+    // Broadcast to group_chat room
+    this.server.to('group_chat').emit('new_group_message', {
+      id: message.id,
+      senderId,
+      senderName: `${sender.profile?.firstName} ${sender.profile?.lastName}`,
+      senderRole: sender.role, // Used to visually distinguish ADMIN messages
+      content: payload.content,
+      createdAt: message.createdAt.toISOString(),
+    });
+
+    this.logger.log(`Group message from ${senderId} (${sender.role}): ${payload.content.substring(0, 50)}`);
+
+    return {
+      success: true,
+      messageId: message.id,
+    };
+  }
+
+  /**
+   * Typing indicator for private conversations
+   *
+   * Payload: { conversationId: string, isTyping: boolean }
+   *
+   * BONUS feature: "Afficher le statut « En train d'écrire »"
+   */
+  @SubscribeMessage('typing')
+  async handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { conversationId: string; isTyping: boolean },
+  ) {
+    const senderId = this.socketUsers.get(client.id);
+
+    if (!senderId) {
+      return { error: 'User not authenticated' };
+    }
+
+    // Get conversation to find the other participant
+    const conversation = await this.prisma.privateConversation.findUnique({
+      where: { id: payload.conversationId },
+    });
+
+    if (!conversation) {
+      return { error: 'Conversation not found' };
+    }
+
+    // Determine receiver (the other participant)
+    const receiverId = conversation.user1Id === senderId
+      ? conversation.user2Id
+      : conversation.user1Id;
+
+    // Send typing status to the other participant
+    this.server.to(`user:${receiverId}`).emit('user_typing', {
+      conversationId: payload.conversationId,
+      userId: senderId,
+      isTyping: payload.isTyping,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Typing indicator for group chat
+   *
+   * Payload: { isTyping: boolean }
+   */
+  @SubscribeMessage('group_typing')
+  async handleGroupTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { isTyping: boolean },
+  ) {
+    const senderId = this.socketUsers.get(client.id);
+
+    if (!senderId) {
+      return { error: 'User not authenticated' };
+    }
+
+    const sender = await this.prisma.user.findUnique({
+      where: { id: senderId },
+      include: { profile: true },
+    });
+
+    if (!sender || (sender.role !== 'ADMIN' && sender.role !== 'MANAGER')) {
+      return { error: 'Only managers and admins can use group chat' };
+    }
+
+    // Broadcast typing status to all group members except sender
+    client.to('group_chat').emit('user_group_typing', {
+      userId: senderId,
+      userName: `${sender.profile?.firstName} ${sender.profile?.lastName}`,
+      isTyping: payload.isTyping,
+    });
+
+    return { success: true };
   }
 }

@@ -8,6 +8,7 @@ export declare class SseController {
     private readonly notificationStreams;
     constructor(prisma: PrismaService, eventBus: EventBus);
     streamNotifications(userId: string): Observable<MessageEvent>;
+    streamNewsFeed(): Observable<MessageEvent>;
     private setupEventListeners;
     private handleDomainEvent;
     private notifyOrderExecution;

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Development files
+*.md
+!README.md
+.git
+.gitignore
+.vscode
+.idea
+
+# Test files
+test
+coverage
+*.test.ts
+*.spec.ts
+
+# Build output (will be created in container)
+dist
+
+# Environment files (will be injected)
+.env
+.env.local
+.env.development
+.env.production
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+
+# Documentation
+docs
+*.pdf
+websocket-test-client.html
+WEBSOCKET_TESTING_GUIDE.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+Jenkinsfile
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore

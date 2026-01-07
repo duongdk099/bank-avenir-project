@@ -4,7 +4,7 @@ import { OpenAccountCommand } from '../../../application/commands/open-account.c
 import { ClientRenameAccountCommand, ClientDeleteAccountCommand } from '../../../application/commands/client-account.commands.js';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
 import { InterestCalculationService } from '../../../application/services/interest-calculation.service.js';
-import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../../../infrastructure/auth/guards/jwt-auth.guard.js';
 import { v4 as uuidv4 } from 'uuid';
 
 @Controller('accounts')

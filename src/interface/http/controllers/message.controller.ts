@@ -1,6 +1,8 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
-import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../../../infrastructure/auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../../../infrastructure/auth/guards/roles.guard.js';
+import { Roles } from '../../../infrastructure/auth/decorators/roles.decorator.js';
 
 @Controller('messages')
 @UseGuards(JwtAuthGuard)
@@ -92,5 +94,52 @@ export class MessageController {
     });
 
     return { count };
+  }
+
+  /**
+   * Get group chat messages (MANAGER and ADMIN only)
+   *
+   * Per Sujet 2: "Discussion de groupe entre les employés"
+   *
+   * Returns messages from the global employee group conversation.
+   * Uses conversationId 'global-employee-chat' for the main employee chat room.
+   */
+  @Get('group')
+  @UseGuards(RolesGuard)
+  @Roles('MANAGER', 'ADMIN')
+  async getGroupMessages(
+    @Request() req,
+    @Query('limit') limit?: string,
+    @Query('conversationId') conversationId?: string,
+  ) {
+    // Default to global employee chat
+    const targetConversationId = conversationId || 'global-employee-chat';
+
+    const messages = await this.prisma.groupMessage.findMany({
+      where: { conversationId: targetConversationId },
+      orderBy: { createdAt: 'asc' },
+      take: limit ? parseInt(limit) : 50,
+    });
+
+    // Fetch sender details separately to avoid include issues
+    const senderIds = [...new Set(messages.map(m => m.senderId))];
+    const senders = await this.prisma.user.findMany({
+      where: { id: { in: senderIds } },
+      include: { profile: true },
+    });
+
+    const senderMap = new Map(senders.map(s => [s.id, s]));
+
+    return messages.map((msg) => {
+      const sender = senderMap.get(msg.senderId);
+      return {
+        id: msg.id,
+        content: msg.content,
+        senderId: msg.senderId,
+        senderName: sender ? `${sender.profile?.firstName} ${sender.profile?.lastName}` : 'Unknown',
+        senderRole: sender?.role || 'UNKNOWN',
+        createdAt: msg.createdAt,
+      };
+    });
   }
 }

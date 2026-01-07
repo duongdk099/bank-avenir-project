@@ -19,7 +19,8 @@ const open_account_command_js_1 = require("../../../application/commands/open-ac
 const client_account_commands_js_1 = require("../../../application/commands/client-account.commands.js");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
 const interest_calculation_service_js_1 = require("../../../application/services/interest-calculation.service.js");
-const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/jwt-auth.guard.js");
+const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/guards/jwt-auth.guard.js");
+const uuid_1 = require("uuid");
 let AccountController = class AccountController {
     commandBus;
     prisma;
@@ -28,6 +29,90 @@ let AccountController = class AccountController {
         this.commandBus = commandBus;
         this.prisma = prisma;
         this.interestService = interestService;
+    }
+    async transfer(dto) {
+        if (dto.amount <= 0) {
+            throw new common_1.BadRequestException('Amount must be greater than 0');
+        }
+        const fromAccount = await this.prisma.bankAccount.findUnique({
+            where: { id: dto.fromAccountId },
+        });
+        if (!fromAccount) {
+            throw new common_1.NotFoundException('Source account not found');
+        }
+        if (fromAccount.status !== 'ACTIVE') {
+            throw new common_1.ForbiddenException('Source account is not active');
+        }
+        const toAccount = await this.prisma.bankAccount.findUnique({
+            where: { iban: dto.toIban },
+        });
+        if (!toAccount) {
+            throw new common_1.NotFoundException('Recipient account not found. Only internal transfers within AVENIR bank are permitted.');
+        }
+        if (toAccount.status !== 'ACTIVE') {
+            throw new common_1.ForbiddenException('Recipient account is not active');
+        }
+        if (fromAccount.id === toAccount.id) {
+            throw new common_1.BadRequestException('Cannot transfer to the same account');
+        }
+        if (fromAccount.balance.toNumber() < dto.amount) {
+            throw new common_1.BadRequestException(`Insufficient funds. Available: €${fromAccount.balance.toNumber().toFixed(2)}, Required: €${dto.amount.toFixed(2)}`);
+        }
+        const result = await this.prisma.$transaction(async (tx) => {
+            const updatedFromAccount = await tx.bankAccount.update({
+                where: { id: dto.fromAccountId },
+                data: { balance: { decrement: dto.amount } },
+            });
+            const updatedToAccount = await tx.bankAccount.update({
+                where: { id: toAccount.id },
+                data: { balance: { increment: dto.amount } },
+            });
+            const description = dto.description || 'Transfer';
+            const transferId = (0, uuid_1.v4)();
+            await tx.accountOperations.create({
+                data: {
+                    id: (0, uuid_1.v4)(),
+                    accountId: dto.fromAccountId,
+                    type: 'TRANSFER',
+                    amount: dto.amount,
+                    description,
+                    recipientIban: dto.toIban,
+                    balanceAfter: updatedFromAccount.balance,
+                },
+            });
+            await tx.accountOperations.create({
+                data: {
+                    id: (0, uuid_1.v4)(),
+                    accountId: toAccount.id,
+                    type: 'TRANSFER',
+                    amount: dto.amount,
+                    description,
+                    senderIban: fromAccount.iban,
+                    balanceAfter: updatedToAccount.balance,
+                },
+            });
+            await tx.transfer.create({
+                data: {
+                    id: transferId,
+                    fromAccountId: dto.fromAccountId,
+                    toAccountId: toAccount.id,
+                    amount: dto.amount,
+                    description,
+                    reference: `TRF-${Date.now()}`,
+                    status: 'COMPLETED',
+                },
+            });
+            return {
+                transferId,
+                fromBalance: updatedFromAccount.balance.toNumber(),
+                toBalance: updatedToAccount.balance.toNumber(),
+            };
+        });
+        return {
+            message: 'Transfer completed successfully',
+            transferId: result.transferId,
+            newBalance: result.fromBalance,
+        };
     }
     async openAccount(dto) {
         const command = new open_account_command_js_1.OpenAccountCommand(dto.userId, dto.accountType, dto.initialDeposit);
@@ -101,6 +186,14 @@ let AccountController = class AccountController {
     }
 };
 exports.AccountController = AccountController;
+__decorate([
+    (0, common_1.Post)('transfer'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AccountController.prototype, "transfer", null);
 __decorate([
     (0, common_1.Post)('open'),
     __param(0, (0, common_1.Body)()),

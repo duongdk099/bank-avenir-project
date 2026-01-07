@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVENIR Bank - WebSocket Test Client</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        #output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .log-time {
+            color: #858585;
+            margin-right: 10px;
+        }
+
+        .log-success {
+            color: #4ec9b0;
+        }
+
+        .log-error {
+            color: #f48771;
+        }
+
+        .log-info {
+            color: #9cdcfe;
+        }
+
+        .log-warning {
+            color: #dcdcaa;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 AVENIR Bank WebSocket Test Client</h1>
+            <p>Test en temps réel des fonctionnalités WebSocket et SSE</p>
+        </div>
+
+        <div class="content">
+            <!-- Connection Section -->
+            <div class="section">
+                <h2>🔌 1. Connexion WebSocket</h2>
+                <div class="form-group">
+                    <label for="userId">User ID (CLIENT, MANAGER ou ADMIN)</label>
+                    <input type="text" id="userId" placeholder="Entrez votre User ID">
+                </div>
+                <div class="button-group">
+                    <button onclick="connect()">✅ Se Connecter</button>
+                    <button class="danger" onclick="disconnect()">❌ Se Déconnecter</button>
+                </div>
+                <p>
+                    Status:
+                    <span id="status" class="status disconnected">Déconnecté</span>
+                </p>
+            </div>
+
+            <!-- Private Chat Section -->
+            <div class="section">
+                <h2>💬 2. Chat Privé (CLIENT ↔ MANAGER)</h2>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="receiverId">Destinataire (User ID)</label>
+                        <input type="text" id="receiverId" placeholder="User ID du destinataire">
+                    </div>
+                    <div class="form-group">
+                        <label for="privateMessage">Message</label>
+                        <input type="text" id="privateMessage" placeholder="Votre message privé">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button onclick="sendPrivateMessage()">📤 Envoyer Message</button>
+                    <button class="secondary" onclick="sendTyping(true)">✍️ Commencer à écrire</button>
+                    <button class="secondary" onclick="sendTyping(false)">⏹️ Arrêter d'écrire</button>
+                </div>
+            </div>
+
+            <!-- Group Chat Section -->
+            <div class="section">
+                <h2>📢 3. Chat de Groupe (MANAGER/ADMIN uniquement)</h2>
+                <div class="form-group">
+                    <label for="groupMessage">Message de groupe</label>
+                    <input type="text" id="groupMessage" placeholder="Message pour tous les employés">
+                </div>
+                <div class="button-group">
+                    <button onclick="sendGroupMessage()">📣 Envoyer au Groupe</button>
+                    <button class="secondary" onclick="sendGroupTyping(true)">✍️ Commencer à écrire (groupe)</button>
+                    <button class="secondary" onclick="sendGroupTyping(false)">⏹️ Arrêter d'écrire (groupe)</button>
+                    <button onclick="getGroupHistory()">📜 Voir Historique</button>
+                </div>
+            </div>
+
+            <!-- Help Request Section -->
+            <div class="section">
+                <h2>🆘 4. Demande d'Aide (CLIENT uniquement)</h2>
+                <div class="form-group">
+                    <label for="helpRequest">Message de demande d'aide</label>
+                    <input type="text" id="helpRequest" placeholder="Décrivez votre problème">
+                </div>
+                <div class="button-group">
+                    <button onclick="requestHelp()">🆘 Demander de l'Aide</button>
+                </div>
+            </div>
+
+            <!-- Accept Help Section -->
+            <div class="section">
+                <h2>✅ 5. Accepter Demande (MANAGER uniquement)</h2>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="acceptConvId">Conversation ID</label>
+                        <input type="text" id="acceptConvId" placeholder="ID de la conversation">
+                    </div>
+                    <div class="form-group">
+                        <label for="acceptClientId">Client ID</label>
+                        <input type="text" id="acceptClientId" placeholder="ID du client">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="acceptMessage">Message d'accueil</label>
+                    <input type="text" id="acceptMessage" placeholder="Message de bienvenue au client">
+                </div>
+                <div class="button-group">
+                    <button onclick="acceptHelp()">✅ Accepter la Demande</button>
+                </div>
+            </div>
+
+            <!-- Transfer Conversation Section -->
+            <div class="section">
+                <h2>🔄 6. Transférer Conversation (MANAGER)</h2>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="transferConvId">Conversation ID</label>
+                        <input type="text" id="transferConvId" placeholder="ID de la conversation">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAdvisorId">Nouveau Conseiller ID</label>
+                        <input type="text" id="newAdvisorId" placeholder="ID du nouveau conseiller">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="transferReason">Raison du transfert</label>
+                    <input type="text" id="transferReason" placeholder="Raison du transfert">
+                </div>
+                <div class="button-group">
+                    <button onclick="transferConversation()">🔄 Transférer</button>
+                </div>
+            </div>
+
+            <!-- Console Output Section -->
+            <div class="section">
+                <h2>📡 Console - Événements du Serveur</h2>
+                <div id="output"></div>
+                <div class="button-group" style="margin-top: 15px;">
+                    <button class="danger" onclick="clearOutput()">🗑️ Effacer Console</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const time = new Date().toLocaleTimeString();
+            const colorClass = type === 'success' ? 'log-success' :
+                              type === 'error' ? 'log-error' :
+                              type === 'warning' ? 'log-warning' : 'log-info';
+
+            output.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span><span class="${colorClass}">${message}</span></div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function connect() {
+            const userId = document.getElementById('userId').value.trim();
+            if (!userId) {
+                alert('⚠️ Veuillez entrer votre User ID');
+                return;
+            }
+
+            if (socket) {
+                log('⚠️ Déjà connecté. Déconnectez-vous d\'abord.', 'warning');
+                return;
+            }
+
+            log(`🔌 Connexion en cours pour l'utilisateur: ${userId}...`, 'info');
+
+            socket = io('http://localhost:3000/chat', {
+                query: { userId: userId }
+            });
+
+            socket.on('connect', () => {
+                document.getElementById('status').textContent = 'Connecté ✅';
+                document.getElementById('status').className = 'status connected';
+                log('✅ Connecté au serveur WebSocket !', 'success');
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('status').textContent = 'Déconnecté ❌';
+                document.getElementById('status').className = 'status disconnected';
+                log('❌ Déconnecté du serveur', 'error');
+            });
+
+            socket.on('connect_error', (error) => {
+                log(`❌ Erreur de connexion: ${error.message}`, 'error');
+            });
+
+            // Private message events
+            socket.on('new_message', (data) => {
+                log(`💬 Message privé de ${data.senderName}: "${data.content}"`, 'success');
+                log(`   📝 Conversation ID: ${data.conversationId}`, 'info');
+            });
+
+            socket.on('user_typing', (data) => {
+                if (data.isTyping) {
+                    log(`✍️ L'utilisateur est en train d'écrire (conversation ${data.conversationId})...`, 'warning');
+                } else {
+                    log(`⏹️ L'utilisateur a arrêté d'écrire`, 'info');
+                }
+            });
+
+            // Group chat events
+            socket.on('new_group_message', (data) => {
+                const roleEmoji = data.senderRole === 'ADMIN' ? '👑' : '👔';
+                const roleTag = data.senderRole === 'ADMIN' ? '[ADMIN]' : '[MANAGER]';
+                log(`📢 Message de groupe ${roleEmoji} ${roleTag} ${data.senderName}: "${data.content}"`, 'success');
+            });
+
+            socket.on('user_group_typing', (data) => {
+                if (data.isTyping) {
+                    log(`✍️ ${data.userName} est en train d'écrire dans le groupe...`, 'warning');
+                } else {
+                    log(`⏹️ ${data.userName} a arrêté d'écrire`, 'info');
+                }
+            });
+
+            // Help request events
+            socket.on('help_request', (data) => {
+                log(`🆘 Demande d'aide directe de ${data.clientName}: "${data.content}"`, 'warning');
+                log(`   📝 Conversation ID: ${data.conversationId}`, 'info');
+                document.getElementById('acceptConvId').value = data.conversationId;
+                document.getElementById('acceptClientId').value = data.clientId;
+            });
+
+            socket.on('help_request_broadcast', (data) => {
+                log(`📢 BROADCAST - Demande d'aide de ${data.clientName}: "${data.content}"`, 'warning');
+                log(`   📝 Conversation ID: ${data.conversationId}, Client ID: ${data.clientId}`, 'info');
+                document.getElementById('acceptConvId').value = data.conversationId;
+                document.getElementById('acceptClientId').value = data.clientId;
+            });
+
+            socket.on('advisor_assigned', (data) => {
+                log(`✅ Conseiller assigné: ${data.advisorName}`, 'success');
+                log(`   📝 Message: "${data.message}"`, 'info');
+            });
+
+            socket.on('help_request_taken', (data) => {
+                log(`ℹ️ La demande d'aide ${data.conversationId} a été prise par ${data.advisorId}`, 'info');
+            });
+
+            socket.on('conversation_transferred_to_you', (data) => {
+                log(`📥 Conversation transférée à vous par ${data.fromAdvisor}`, 'success');
+                log(`   👤 Client: ${data.clientName}`, 'info');
+                log(`   📝 Raison: ${data.reason}`, 'info');
+            });
+
+            socket.on('advisor_changed', (data) => {
+                log(`🔄 Votre conseiller a changé pour ${data.newAdvisorName}`, 'warning');
+                log(`   📝 Raison: ${data.reason}`, 'info');
+            });
+        }
+
+        function disconnect() {
+            if (!socket) {
+                log('⚠️ Pas de connexion active', 'warning');
+                return;
+            }
+            socket.disconnect();
+            socket = null;
+            log('👋 Déconnexion demandée', 'info');
+        }
+
+        function sendPrivateMessage() {
+            if (!socket) {
+                alert('⚠️ Veuillez vous connecter d\'abord');
+                return;
+            }
+            const receiverId = document.getElementById('receiverId').value.trim();
+            const content = document.getElementById('privateMessage').value.trim();
+
+            if (!receiverId || !content) {
+                alert('⚠️ Veuillez remplir tous les champs');
+                return;
+            }
+
+            socket.emit('private_message', { receiverId, content }, (response) => {
+                if (response.success) {
+                    log(`✅ Message privé envoyé à ${receiverId}`, 'success');
+                    log(`   📝 Conversation ID: ${response.conversationId}`, 'info');
+                    document.getElementById('privateMessage').value = '';
+                } else {
+                    log(`❌ Erreur: ${response.error}`, 'error');
+                }
+            });
+        }
+
+        function sendTyping(isTyping) {
+            if (!socket) {
+                alert('⚠️ Veuillez vous connecter d\'abord');
+                return;
+            }
+            const conversationId = prompt('Entrez le Conversation ID:');
+            if (!conversationId) return;
+
+            socket.emit('typing', { conversationId, isTyping });
+            log(`${isTyping ? '✍️ Envoi du statut "en train d\'écrire"' : '⏹️ Arrêt du statut "en train d\'écrire"'}`, 'info');
+        }
+
+        function sendGroupMessage() {
+            if (!socket) {
+                alert('⚠️ Veuillez vous connecter d\'abord');
+                return;
+            }
+            const content = document.getElementById('groupMessage').value.trim();
+
+            if (!content) {
+                alert('⚠️ Veuillez entrer un message');
+                return;
+            }
+
+            socket.emit('group_message', { content }, (response) => {
+                if (response.success) {
+                    log(`✅ Message de groupe envoyé`, 'success');
+                    document.getElementById('groupMessage').value = '';
+                } else {
+                    log(`❌ Erreur: ${response.error}`, 'error');
+                }
+            });
+        }
+
+        function sendGroupTyping(isTyping) {
+            if (!socket) {
+                alert('⚠️ Veuillez vous connecter d\'abord');
+                return;
+            }
+            socket.emit('group_typing', { isTyping });
+            log(`${isTyping ? '✍️ Envoi du statut "en train d\'écrire" (groupe)' : '⏹️ Arrêt du statut "en train d\'écrire" (groupe)'}`, 'info');
+        }
+
+        function requestHelp() {
+            if (!socket) {
+                alert('⚠️ Veuillez vous connecter d\'abord');
+                return;
+            }
+            const content = document.getElementById('helpRequest').value.trim();
+
+            if (!content) {
+                alert('⚠️ Veuillez décrire votre problème');
+                return;
+            }
+
+            socket.emit('request_help', { content }, (response) => {
+                if (response.success) {
+                    log(`✅ Demande d'aide envoyée`, 'success');
+                    log(`   📝 ${response.message}`, 'info');
+                    document.getElementById('helpRequest').value = '';
+                } else {
+                    log(`❌ Erreur: ${response.error}`, 'error');
+                }
+            });
+        }
+
+        function acceptHelp() {
+            if (!socket) {
+                alert('⚠️ Veuillez vous connecter d\'abord');
+                return;
+            }
+            const conversationId = document.getElementById('acceptConvId').value.trim();
+            const clientId = document.getElementById('acceptClientId').value.trim();
+            const message = document.getElementById('acceptMessage').value.trim() || 'Bonjour ! Comment puis-je vous aider ?';
+
+            if (!conversationId || !clientId) {
+                alert('⚠️ Conversation ID et Client ID requis');
+                return;
+            }
+
+            socket.emit('accept_help', { conversationId, clientId, message }, (response) => {
+                if (response.success) {
+                    log(`✅ Demande d'aide acceptée !`, 'success');
+                    log(`   📝 ${response.message}`, 'info');
+                } else {
+                    log(`❌ Erreur: ${response.error}`, 'error');
+                }
+            });
+        }
+
+        function transferConversation() {
+            if (!socket) {
+                alert('⚠️ Veuillez vous connecter d\'abord');
+                return;
+            }
+            const conversationId = document.getElementById('transferConvId').value.trim();
+            const newAdvisorId = document.getElementById('newAdvisorId').value.trim();
+            const reason = document.getElementById('transferReason').value.trim() || 'Transfert de conversation';
+
+            if (!conversationId || !newAdvisorId) {
+                alert('⚠️ Conversation ID et Nouveau Conseiller ID requis');
+                return;
+            }
+
+            socket.emit('transfer_conversation', { conversationId, newAdvisorId, reason }, (response) => {
+                if (response.success) {
+                    log(`✅ Conversation transférée avec succès !`, 'success');
+                    log(`   📝 ${response.message}`, 'info');
+                } else {
+                    log(`❌ Erreur: ${response.error}`, 'error');
+                }
+            });
+        }
+
+        function getGroupHistory() {
+            log('📜 Récupération de l\'historique du groupe via REST API...', 'info');
+            log('ℹ️ Cette fonctionnalité nécessite une requête HTTP GET /messages/group', 'warning');
+            log('ℹ️ Utilisez Postman ou votre navigateur pour: http://localhost:3000/messages/group?limit=50', 'info');
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+            log('🗑️ Console effacée', 'info');
+        }
+
+        // Auto-focus on userId input
+        window.onload = () => {
+            document.getElementById('userId').focus();
+            log('👋 Bienvenue ! Entrez votre User ID et connectez-vous pour commencer.', 'info');
+        };
+    </script>
+</body>
+</html>

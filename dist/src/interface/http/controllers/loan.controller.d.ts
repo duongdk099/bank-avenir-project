@@ -14,11 +14,11 @@ export declare class LoanController {
     }): Promise<any>;
     getLoan(id: string): Promise<({
         account: {
+            name: string | null;
             id: string;
             status: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string | null;
             userId: string;
             iban: string;
             accountType: import("@prisma/client").$Enums.AccountType;
@@ -53,11 +53,11 @@ export declare class LoanController {
     }[]>;
     getUserLoans(userId: string): Promise<({
         account: {
+            name: string | null;
             id: string;
             status: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string | null;
             userId: string;
             iban: string;
             accountType: import("@prisma/client").$Enums.AccountType;
@@ -91,4 +91,74 @@ export declare class LoanController {
         totalInterest: number;
         totalInsurance: number;
     }>;
+    requestLoan(req: any, dto: {
+        accountId: string;
+        requestedAmount: number;
+        termMonths: number;
+        purpose: string;
+    }): Promise<any>;
+    getLoanRequests(): Promise<{
+        id: string;
+        status: import("@prisma/client").$Enums.LoanRequestStatus;
+        createdAt: Date;
+        userId: string;
+        accountId: string;
+        requestedAmount: import("@prisma/client-runtime-utils").Decimal;
+        termMonths: number;
+        purpose: string;
+        managerId: string | null;
+        approvedAmount: import("@prisma/client-runtime-utils").Decimal | null;
+        approvedRate: import("@prisma/client-runtime-utils").Decimal | null;
+        approvedTermMonths: number | null;
+        rejectionReason: string | null;
+        assignedAt: Date | null;
+        approvedAt: Date | null;
+        rejectedAt: Date | null;
+    }[]>;
+    getLoanRequest(id: string): Promise<{
+        id: string;
+        status: import("@prisma/client").$Enums.LoanRequestStatus;
+        createdAt: Date;
+        userId: string;
+        accountId: string;
+        requestedAmount: import("@prisma/client-runtime-utils").Decimal;
+        termMonths: number;
+        purpose: string;
+        managerId: string | null;
+        approvedAmount: import("@prisma/client-runtime-utils").Decimal | null;
+        approvedRate: import("@prisma/client-runtime-utils").Decimal | null;
+        approvedTermMonths: number | null;
+        rejectionReason: string | null;
+        assignedAt: Date | null;
+        approvedAt: Date | null;
+        rejectedAt: Date | null;
+    } | null>;
+    assignLoanRequest(req: any, id: string): Promise<any>;
+    approveLoanRequest(req: any, id: string, dto: {
+        approvedAmount: number;
+        annualRate: number;
+        termMonths: number;
+        insuranceRate: number;
+    }): Promise<any>;
+    rejectLoanRequest(req: any, id: string, dto: {
+        reason: string;
+    }): Promise<any>;
+    getMyLoanRequests(req: any): Promise<{
+        id: string;
+        status: import("@prisma/client").$Enums.LoanRequestStatus;
+        createdAt: Date;
+        userId: string;
+        accountId: string;
+        requestedAmount: import("@prisma/client-runtime-utils").Decimal;
+        termMonths: number;
+        purpose: string;
+        managerId: string | null;
+        approvedAmount: import("@prisma/client-runtime-utils").Decimal | null;
+        approvedRate: import("@prisma/client-runtime-utils").Decimal | null;
+        approvedTermMonths: number | null;
+        rejectionReason: string | null;
+        assignedAt: Date | null;
+        approvedAt: Date | null;
+        rejectedAt: Date | null;
+    }[]>;
 }

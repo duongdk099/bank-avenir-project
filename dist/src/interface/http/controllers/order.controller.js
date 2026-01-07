@@ -19,6 +19,9 @@ const place_order_command_js_1 = require("../../../application/commands/place-or
 const cancel_order_command_js_1 = require("../../../application/commands/cancel-order.command.js");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
 const order_matching_service_js_1 = require("../../../domain/services/order-matching.service.js");
+const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/guards/jwt-auth.guard.js");
+const roles_guard_js_1 = require("../../../infrastructure/auth/guards/roles.guard.js");
+const roles_decorator_js_1 = require("../../../infrastructure/auth/decorators/roles.decorator.js");
 let OrderController = class OrderController {
     commandBus;
     prisma;
@@ -28,8 +31,9 @@ let OrderController = class OrderController {
         this.prisma = prisma;
         this.matchingService = matchingService;
     }
-    async placeOrder(dto) {
-        const command = new place_order_command_js_1.PlaceOrderCommand(dto.userId, dto.accountId, dto.securityId, dto.type, dto.quantity, dto.price);
+    async placeOrder(req, dto) {
+        const userId = req.user.sub;
+        const command = new place_order_command_js_1.PlaceOrderCommand(userId, dto.accountId, dto.securityId, dto.type, dto.quantity, dto.price);
         const result = await this.commandBus.execute(command);
         return {
             message: 'Order placed successfully',
@@ -45,6 +49,17 @@ let OrderController = class OrderController {
             },
         });
         return order;
+    }
+    async getMyOrders(req) {
+        const userId = req.user.sub;
+        const orders = await this.prisma.order.findMany({
+            where: { userId },
+            include: {
+                security: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return orders;
     }
     async getUserOrders(userId) {
         const orders = await this.prisma.order.findMany({
@@ -79,8 +94,9 @@ let OrderController = class OrderController {
         });
         return trades;
     }
-    async cancelOrder(id, dto) {
-        const command = new cancel_order_command_js_1.CancelOrderCommand(id, dto.userId, dto.reason);
+    async cancelOrder(req, id, dto) {
+        const userId = req.user.sub;
+        const command = new cancel_order_command_js_1.CancelOrderCommand(id, userId, dto.reason);
         const result = await this.commandBus.execute(command);
         return {
             message: 'Order cancelled successfully',
@@ -91,20 +107,32 @@ let OrderController = class OrderController {
 exports.OrderController = OrderController;
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    (0, roles_decorator_js_1.Roles)('CLIENT', 'MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], OrderController.prototype, "placeOrder", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, roles_decorator_js_1.Roles)('CLIENT', 'MANAGER', 'ADMIN'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], OrderController.prototype, "getOrder", null);
 __decorate([
+    (0, common_1.Get)('my/orders'),
+    (0, roles_decorator_js_1.Roles)('CLIENT', 'MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], OrderController.prototype, "getMyOrders", null);
+__decorate([
     (0, common_1.Get)('user/:userId'),
+    (0, roles_decorator_js_1.Roles)('MANAGER', 'ADMIN'),
     __param(0, (0, common_1.Param)('userId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -112,6 +140,7 @@ __decorate([
 ], OrderController.prototype, "getUserOrders", null);
 __decorate([
     (0, common_1.Get)('security/:securityId/book'),
+    (0, roles_decorator_js_1.Roles)('CLIENT', 'MANAGER', 'ADMIN'),
     __param(0, (0, common_1.Param)('securityId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -119,6 +148,7 @@ __decorate([
 ], OrderController.prototype, "getOrderBook", null);
 __decorate([
     (0, common_1.Get)('account/:accountId/trades'),
+    (0, roles_decorator_js_1.Roles)('CLIENT', 'MANAGER', 'ADMIN'),
     __param(0, (0, common_1.Param)('accountId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -126,14 +156,17 @@ __decorate([
 ], OrderController.prototype, "getAccountTrades", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
+    (0, roles_decorator_js_1.Roles)('CLIENT', 'MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], OrderController.prototype, "cancelOrder", null);
 exports.OrderController = OrderController = __decorate([
     (0, common_1.Controller)('orders'),
+    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard, roles_guard_js_1.RolesGuard),
     __metadata("design:paramtypes", [cqrs_1.CommandBus,
         prisma_service_js_1.PrismaService,
         order_matching_service_js_1.OrderMatchingService])

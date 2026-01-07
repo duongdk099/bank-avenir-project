@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationController = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
-const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/jwt-auth.guard.js");
+const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/guards/jwt-auth.guard.js");
 let NotificationController = class NotificationController {
     prisma;
     constructor(prisma) {

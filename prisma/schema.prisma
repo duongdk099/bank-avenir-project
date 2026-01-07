@@ -64,14 +64,17 @@ enum LoanStatus {
 // ==================== MODELS ====================
 
 model User {
-  id              String            @id @default(uuid())
-  email           String            @unique
-  passwordHash    String            @map("password_hash")
-  role            UserRole          @default(CLIENT)
-  status          UserStatus        @default(ACTIVE)
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  
+  id                    String            @id @default(uuid())
+  email                 String            @unique
+  passwordHash          String            @map("password_hash")
+  role                  UserRole          @default(CLIENT)
+  status                UserStatus        @default(ACTIVE)
+  isEmailVerified       Boolean           @default(false) @map("is_email_verified")
+  emailVerificationToken String?          @map("email_verification_token")
+  emailVerifiedAt       DateTime?         @map("email_verified_at")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
   profile         UserProfile?
   accounts        BankAccount[]
   sentMessages    Message[]         @relation("SentMessages")
@@ -311,11 +314,96 @@ model Notification {
   message         String
   type            String
   isRead          Boolean   @default(false) @map("is_read")
+  metadata        String?   @db.Text
   createdAt       DateTime  @default(now()) @map("created_at")
-  
+
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+// ==================== LOAN REQUESTS ====================
+
+enum LoanRequestStatus {
+  PENDING
+  ASSIGNED
+  APPROVED
+  REJECTED
+}
+
+model LoanRequest {
+  id                  String            @id @default(uuid())
+  userId              String            @map("user_id")
+  accountId           String            @map("account_id")
+  requestedAmount     Decimal           @map("requested_amount") @db.Decimal(15, 2)
+  termMonths          Int               @map("term_months")
+  purpose             String
+  status              LoanRequestStatus @default(PENDING)
+  managerId           String?           @map("manager_id")
+  approvedAmount      Decimal?          @map("approved_amount") @db.Decimal(15, 2)
+  approvedRate        Decimal?          @map("approved_rate") @db.Decimal(5, 4)
+  approvedTermMonths  Int?              @map("approved_term_months")
+  rejectionReason     String?           @map("rejection_reason")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  assignedAt          DateTime?         @map("assigned_at")
+  approvedAt          DateTime?         @map("approved_at")
+  rejectedAt          DateTime?         @map("rejected_at")
+
+  @@map("loan_requests")
+}
+
+// ==================== NEWS / FEED ====================
+
+model News {
+  id              String    @id @default(uuid())
+  authorId        String    @map("author_id")
+  title           String
+  content         String    @db.Text
+  category        String    @default("GENERAL")
+  isPublished     Boolean   @default(true) @map("is_published")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("news")
+}
+
+// ==================== GROUP CONVERSATIONS ====================
+
+model GroupConversation {
+  id              String              @id @default(uuid())
+  name            String
+  description     String?
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  messages        GroupMessage[]
+  participants    GroupParticipant[]
+
+  @@map("group_conversations")
+}
+
+model GroupParticipant {
+  id              String            @id @default(uuid())
+  conversationId  String            @map("conversation_id")
+  userId          String            @map("user_id")
+  role            UserRole          @default(MANAGER)
+  joinedAt        DateTime          @default(now()) @map("joined_at")
+
+  conversation    GroupConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("group_participants")
+}
+
+model GroupMessage {
+  id              String            @id @default(uuid())
+  conversationId  String            @map("conversation_id")
+  senderId        String            @map("sender_id")
+  content         String            @db.Text
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  conversation    GroupConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("group_messages")
 }
 
 // ==================== EVENT STORE ====================

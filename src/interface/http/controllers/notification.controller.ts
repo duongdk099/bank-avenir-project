@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Param, Query, UseGuards, Body } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service.js';
-import { JwtAuthGuard } from '../../../infrastructure/auth/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../../../infrastructure/auth/guards/jwt-auth.guard.js';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)

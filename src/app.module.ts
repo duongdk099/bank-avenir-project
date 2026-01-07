@@ -18,17 +18,20 @@ import { ChatModule } from './application/chat.module';
 import { NotificationModule } from './application/notification.module';
 import { AdminModule } from './application/admin.module';
 
+// Controllers
+import { NewsController } from './interface/http/controllers/news.controller';
+
 @Module({
   imports: [
     // Schedule for cron jobs (interest calculation)
     ScheduleModule.forRoot(),
-    
+
     // Infrastructure
     PrismaModule,
     AuthModule,
     EventStoreModule,
     RepositoryModule,
-    
+
     // Domain Modules
     UserModule,
     AccountModule,
@@ -38,7 +41,7 @@ import { AdminModule } from './application/admin.module';
     NotificationModule,
     AdminModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, NewsController],
   providers: [AppService],
 })
 export class AppModule {}

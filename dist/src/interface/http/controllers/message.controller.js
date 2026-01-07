@@ -15,7 +15,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageController = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_js_1 = require("../../../infrastructure/database/prisma/prisma.service.js");
-const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/jwt-auth.guard.js");
+const jwt_auth_guard_js_1 = require("../../../infrastructure/auth/guards/jwt-auth.guard.js");
+const roles_guard_js_1 = require("../../../infrastructure/auth/guards/roles.guard.js");
+const roles_decorator_js_1 = require("../../../infrastructure/auth/decorators/roles.decorator.js");
 let MessageController = class MessageController {
     prisma;
     constructor(prisma) {
@@ -87,6 +89,31 @@ let MessageController = class MessageController {
         });
         return { count };
     }
+    async getGroupMessages(req, limit, conversationId) {
+        const targetConversationId = conversationId || 'global-employee-chat';
+        const messages = await this.prisma.groupMessage.findMany({
+            where: { conversationId: targetConversationId },
+            orderBy: { createdAt: 'asc' },
+            take: limit ? parseInt(limit) : 50,
+        });
+        const senderIds = [...new Set(messages.map(m => m.senderId))];
+        const senders = await this.prisma.user.findMany({
+            where: { id: { in: senderIds } },
+            include: { profile: true },
+        });
+        const senderMap = new Map(senders.map(s => [s.id, s]));
+        return messages.map((msg) => {
+            const sender = senderMap.get(msg.senderId);
+            return {
+                id: msg.id,
+                content: msg.content,
+                senderId: msg.senderId,
+                senderName: sender ? `${sender.profile?.firstName} ${sender.profile?.lastName}` : 'Unknown',
+                senderRole: sender?.role || 'UNKNOWN',
+                createdAt: msg.createdAt,
+            };
+        });
+    }
 };
 exports.MessageController = MessageController;
 __decorate([
@@ -111,6 +138,17 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], MessageController.prototype, "getUnreadCount", null);
+__decorate([
+    (0, common_1.Get)('group'),
+    (0, common_1.UseGuards)(roles_guard_js_1.RolesGuard),
+    (0, roles_decorator_js_1.Roles)('MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)('conversationId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], MessageController.prototype, "getGroupMessages", null);
 exports.MessageController = MessageController = __decorate([
     (0, common_1.Controller)('messages'),
     (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),

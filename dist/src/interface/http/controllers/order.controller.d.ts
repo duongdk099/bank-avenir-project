@@ -6,8 +6,7 @@ export declare class OrderController {
     private readonly prisma;
     private readonly matchingService;
     constructor(commandBus: CommandBus, prisma: PrismaService, matchingService: OrderMatchingService);
-    placeOrder(dto: {
-        userId: string;
+    placeOrder(req: any, dto: {
         accountId: string;
         securityId: string;
         type: string;
@@ -17,8 +16,8 @@ export declare class OrderController {
     getOrder(id: string): Promise<({
         security: {
             symbol: string;
-            id: string;
             name: string;
+            id: string;
             type: string;
             currency: string;
             exchange: string | null;
@@ -27,11 +26,11 @@ export declare class OrderController {
             lastUpdated: Date;
         };
         account: {
+            name: string | null;
             id: string;
             status: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string | null;
             userId: string;
             iban: string;
             accountType: import("@prisma/client").$Enums.AccountType;
@@ -52,11 +51,37 @@ export declare class OrderController {
         price: import("@prisma/client-runtime-utils").Decimal;
         executedAt: Date | null;
     }) | null>;
+    getMyOrders(req: any): Promise<({
+        security: {
+            symbol: string;
+            name: string;
+            id: string;
+            type: string;
+            currency: string;
+            exchange: string | null;
+            currentPrice: import("@prisma/client-runtime-utils").Decimal;
+            isAvailable: boolean;
+            lastUpdated: Date;
+        };
+    } & {
+        id: string;
+        status: import("@prisma/client").$Enums.OrderStatus;
+        createdAt: Date;
+        userId: string;
+        type: import("@prisma/client").$Enums.TradeType;
+        accountId: string;
+        securityId: string;
+        quantity: number;
+        remainingQuantity: number;
+        executedQuantity: number;
+        price: import("@prisma/client-runtime-utils").Decimal;
+        executedAt: Date | null;
+    })[]>;
     getUserOrders(userId: string): Promise<({
         security: {
             symbol: string;
-            id: string;
             name: string;
+            id: string;
             type: string;
             currency: string;
             exchange: string | null;
@@ -87,8 +112,8 @@ export declare class OrderController {
     getAccountTrades(accountId: string): Promise<({
         security: {
             symbol: string;
-            id: string;
             name: string;
+            id: string;
             type: string;
             currency: string;
             exchange: string | null;
@@ -108,8 +133,7 @@ export declare class OrderController {
         sellAccountId: string;
         commission: import("@prisma/client-runtime-utils").Decimal;
     })[]>;
-    cancelOrder(id: string, dto: {
-        userId: string;
+    cancelOrder(req: any, id: string, dto: {
         reason?: string;
     }): Promise<any>;
 }

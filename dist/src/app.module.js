@@ -22,6 +22,7 @@ const loan_module_1 = require("./application/loan.module");
 const chat_module_1 = require("./application/chat.module");
 const notification_module_1 = require("./application/notification.module");
 const admin_module_1 = require("./application/admin.module");
+const news_controller_1 = require("./interface/http/controllers/news.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -41,7 +42,7 @@ exports.AppModule = AppModule = __decorate([
             notification_module_1.NotificationModule,
             admin_module_1.AdminModule,
         ],
-        controllers: [app_controller_1.AppController],
+        controllers: [app_controller_1.AppController, news_controller_1.NewsController],
         providers: [app_service_1.AppService],
     })
 ], AppModule);
